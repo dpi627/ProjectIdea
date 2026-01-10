@@ -131,9 +131,10 @@ class Idea {
 }
 
 class Project {
-  constructor({ id = createId(), name, ideas = [] }) {
+  constructor({ id = createId(), name, description = "", ideas = [] }) {
     this.id = id;
     this.name = name;
+    this.description = description;
     this.ideas = ideas.map((idea) => new Idea(idea));
   }
 
@@ -167,6 +168,7 @@ class LocalStorageProjectRepository {
     const payload = projects.map((project) => ({
       id: project.id,
       name: project.name,
+      description: project.description,
       ideas: project.ideas.map((idea) => ({
         id: idea.id,
         text: idea.text,
@@ -182,6 +184,7 @@ class LocalStorageProjectRepository {
 const createMockProjects = () => [
   new Project({
     name: "Weekend Build",
+    description: "Launch a one-weekend prototype.",
     ideas: [
       { text: "Sketch 3 quick UX flows", done: true },
       { text: "Draft a one-page pitch", done: false },
@@ -190,6 +193,7 @@ const createMockProjects = () => [
   }),
   new Project({
     name: "Growth Experiments",
+    description: "Short tests to unlock new channels.",
     ideas: [
       { text: "Interview 5 creators", done: true },
       { text: "Write launch email v1", done: false },
@@ -229,8 +233,11 @@ class ProjectService {
     );
   }
 
-  createProject(name) {
-    const project = new Project({ name: name.trim() });
+  createProject(name, description = "") {
+    const project = new Project({
+      name: name.trim(),
+      description: description.trim(),
+    });
     this.projects = [project, ...this.projects];
     this.repository.save(this.projects);
     return project;
@@ -239,6 +246,12 @@ class ProjectService {
   updateProjectName(projectId, name) {
     const project = this.findProject(projectId);
     project.name = name.trim();
+    this.repository.save(this.projects);
+  }
+
+  updateProjectDescription(projectId, description) {
+    const project = this.findProject(projectId);
+    project.description = description.trim();
     this.repository.save(this.projects);
   }
 
@@ -496,6 +509,7 @@ class ProjectIdeaUI {
     this.projectsList = document.getElementById("projectsList");
     this.projectForm = document.getElementById("projectForm");
     this.projectNameInput = document.getElementById("projectName");
+    this.projectDescriptionInput = document.getElementById("projectDescription");
     this.activeProjectName = document.getElementById("activeProjectName");
     this.progressFill = document.getElementById("progressFill");
     this.progressLabel = document.getElementById("progressLabel");
@@ -515,6 +529,7 @@ class ProjectIdeaUI {
     this.editForm = document.getElementById("editForm");
     this.editTitle = document.getElementById("editTitle");
     this.editInput = document.getElementById("editInput");
+    this.editDescriptionInput = document.getElementById("editDescription");
     this.editCancel = document.getElementById("editCancel");
     this.confirmDialog = document.getElementById("confirmDialog");
     this.confirmForm = document.getElementById("confirmForm");
@@ -545,9 +560,11 @@ class ProjectIdeaUI {
       event.preventDefault();
       const name = this.projectNameInput.value.trim();
       if (!name) return;
-      const project = this.service.createProject(name);
+      const description = this.projectDescriptionInput.value.trim();
+      const project = this.service.createProject(name, description);
       this.animateProjectsOnNextRender = true;
       this.projectNameInput.value = "";
+      this.projectDescriptionInput.value = "";
       this.activeProjectId = project.id;
       this.render();
     });
@@ -566,6 +583,7 @@ class ProjectIdeaUI {
             mode: "project",
             id: project.id,
             text: project.name,
+            description: project.description,
             title: "Edit project",
             maxLength: 50,
           });
@@ -767,6 +785,10 @@ class ProjectIdeaUI {
 
       if (this.editingMode === "project" && this.editingProjectId) {
         this.service.updateProjectName(this.editingProjectId, text);
+        this.service.updateProjectDescription(
+          this.editingProjectId,
+          this.editDescriptionInput.value
+        );
         this.animateProjectsOnNextRender = true;
       }
 
@@ -826,7 +848,7 @@ class ProjectIdeaUI {
     this.updateLogToggleLabel();
   }
 
-  openEditDialog({ mode, id, text, title, maxLength }) {
+  openEditDialog({ mode, id, text, description = "", title, maxLength }) {
     if (!id) return;
     this.editingMode = mode;
     this.editingIdeaId = mode === "idea" ? id : null;
@@ -834,6 +856,9 @@ class ProjectIdeaUI {
     this.editTitle.textContent = title;
     this.editInput.value = text;
     this.editInput.maxLength = maxLength || 80;
+    const showDescription = mode === "project";
+    this.editDescriptionInput.classList.toggle("hidden", !showDescription);
+    this.editDescriptionInput.value = showDescription ? description : "";
 
     if (typeof this.editDialog.showModal === "function") {
       this.editDialog.showModal();
@@ -845,12 +870,24 @@ class ProjectIdeaUI {
         if (mode === "idea" && this.activeProjectId) {
           this.service.updateIdeaText(this.activeProjectId, id, nextText);
           this.animateIdeasOnNextRender = true;
+          this.render();
+          this.closeEditDialog();
+          return;
         }
         if (mode === "project") {
+          const nextDescription = window.prompt(
+            "Project description (optional)",
+            description
+          );
           this.service.updateProjectName(id, nextText);
+          if (nextDescription !== null) {
+            this.service.updateProjectDescription(id, nextDescription);
+          }
           this.animateProjectsOnNextRender = true;
+          this.render();
+          this.closeEditDialog();
+          return;
         }
-        this.render();
       }
       this.closeEditDialog();
     }
@@ -865,6 +902,8 @@ class ProjectIdeaUI {
     this.editingProjectId = null;
     this.editTitle.textContent = "Edit idea";
     this.editInput.value = "";
+    this.editDescriptionInput.value = "";
+    this.editDescriptionInput.classList.add("hidden");
   }
 
   openConfirmDialog({ title, message, confirmText, onConfirm }) {
@@ -941,6 +980,10 @@ class ProjectIdeaUI {
     projects.forEach((project, index) => {
       const stats = project.stats();
       const hasOpenIdeas = stats.total > 0 && stats.done < stats.total;
+      const description = (project.description || "").trim();
+      const descriptionMarkup = description
+        ? `<p class="project-description">${escapeHtml(description)}</p>`
+        : "";
       const liveIndicator = hasOpenIdeas
         ? '<span class="project-live" aria-hidden="true"></span>'
         : "";
@@ -956,9 +999,12 @@ class ProjectIdeaUI {
       card.dataset.id = project.id;
       card.innerHTML = `
         <div class="project-card-header">
-          <div class="project-title-row">
-            <h3>${escapeHtml(project.name)}</h3>
-            ${liveIndicator}
+          <div class="project-title-block">
+            <div class="project-title-row">
+              <h3>${escapeHtml(project.name)}</h3>
+              ${liveIndicator}
+            </div>
+            ${descriptionMarkup}
           </div>
           <div class="project-actions">
             <button class="icon-button" type="button" data-action="edit-project" aria-label="Edit project" title="Edit project">

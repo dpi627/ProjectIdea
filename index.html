@@ -34,6 +34,13 @@
           </div>
           <form id="projectForm" class="inline-form" autocomplete="off">
             <input id="projectName" type="text" placeholder="New project name" maxlength="50" required />
+            <input
+              id="projectDescription"
+              type="text"
+              placeholder="Optional description"
+              maxlength="120"
+              aria-label="Project description"
+            />
             <button type="submit" class="primary">Add</button>
           </form>
         </div>
@@ -94,6 +101,13 @@
     <form id="editForm" class="dialog-card" autocomplete="off">
       <h3 id="editTitle">Edit idea</h3>
       <input id="editInput" type="text" maxlength="160" required />
+      <input
+        id="editDescription"
+        class="hidden"
+        type="text"
+        maxlength="120"
+        placeholder="Project description (optional)"
+      />
       <div class="dialog-actions">
         <button id="editCancel" class="ghost" type="button">Cancel</button>
         <button class="primary" type="submit">Save</button>
