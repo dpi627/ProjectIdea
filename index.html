@@ -18,12 +18,14 @@
         </div>
       </div>
       <div class="topbar-actions">
-        <button id="themeToggle" class="ghost" type="button">Light mode</button>
+        <button id="themeToggle" class="ghost theme-toggle" type="button" aria-label="Dark mode"></button>
+        <button id="logToggle" class="ghost log-toggle" type="button" aria-label="Hide log"></button>
         <div class="topbar-note">No auth · Stored in your browser</div>
       </div>
     </header>
 
     <main class="workspace">
+      <!-- section project panel -->
       <aside class="panel projects-panel">
         <div class="panel-header">
           <div>
@@ -35,9 +37,11 @@
             <button type="submit" class="primary">Add</button>
           </form>
         </div>
+        <!-- section project list -->
         <div id="projectsList" class="project-list"></div>
       </aside>
 
+      <!-- section idea panel -->
       <section class="panel ideas-panel">
         <div class="panel-header">
           <div class="project-header">
@@ -53,7 +57,7 @@
             </div>
           </div>
           <form id="ideaForm" class="inline-form" autocomplete="off">
-            <input id="ideaText" type="text" placeholder="Add an idea..." maxlength="80" required />
+            <input id="ideaText" type="text" placeholder="Add an idea..." maxlength="160" required />
             <button type="submit" class="primary">Add idea</button>
           </form>
         </div>
@@ -61,19 +65,26 @@
         <div id="ideasEmpty" class="empty-state">
           <p>Start by creating a project and capturing a few ideas.</p>
         </div>
+        <!-- section idea list -->
         <ul id="ideasList" class="ideas-list"></ul>
       </section>
 
+      <!-- section finished ideas panel -->
       <aside class="panel log-panel">
         <div class="panel-header">
           <div>
             <p class="eyebrow">Session log</p>
             <h2>Finished ideas</h2>
           </div>
+          <label class="log-filter inline-form">
+            <span class="sr-only">Search finished ideas</span>
+            <input id="logFilter" type="text" placeholder="Search ideas or projects..." />
+          </label>
         </div>
         <div id="logEmpty" class="empty-state">
           <p>Complete an idea to see it logged here.</p>
         </div>
+        <!-- section finished idea list -->
         <ul id="logList" class="log-list"></ul>
       </aside>
     </main>
@@ -81,11 +92,22 @@
 
   <dialog id="editDialog" class="dialog">
     <form id="editForm" class="dialog-card" autocomplete="off">
-      <h3>Edit idea</h3>
-      <input id="editInput" type="text" maxlength="80" required />
+      <h3 id="editTitle">Edit idea</h3>
+      <input id="editInput" type="text" maxlength="160" required />
       <div class="dialog-actions">
         <button id="editCancel" class="ghost" type="button">Cancel</button>
         <button class="primary" type="submit">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="confirmDialog" class="dialog">
+    <form id="confirmForm" class="dialog-card" autocomplete="off">
+      <h3 id="confirmTitle">Delete</h3>
+      <p id="confirmMessage" class="dialog-message"></p>
+      <div class="dialog-actions">
+        <button id="confirmCancel" class="ghost" type="button">Cancel</button>
+        <button id="confirmConfirm" class="primary" type="submit">Delete</button>
       </div>
     </form>
   </dialog>
