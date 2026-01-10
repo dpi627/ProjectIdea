@@ -63,6 +63,20 @@
               <span id="progressLabel">0%</span>
             </div>
           </div>
+          <div id="ideaTabs" class="idea-tabs" role="tablist" aria-label="Idea filters">
+            <button class="tab-button" type="button" data-filter="todo" aria-pressed="true">
+              <span class="tab-label">Todo</span>
+              <span class="tab-count">0</span>
+            </button>
+            <button class="tab-button" type="button" data-filter="done" aria-pressed="false">
+              <span class="tab-label">Done</span>
+              <span class="tab-count">0</span>
+            </button>
+            <button class="tab-button" type="button" data-filter="all" aria-pressed="false">
+              <span class="tab-label">All</span>
+              <span class="tab-count">0</span>
+            </button>
+          </div>
           <form id="ideaForm" class="inline-form" autocomplete="off">
             <input id="ideaText" type="text" placeholder="Add an idea..." maxlength="160" required />
             <button type="submit" class="primary">Add idea</button>

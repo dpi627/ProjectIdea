@@ -520,6 +520,7 @@ class ProjectIdeaUI {
 
     this.ideaForm = document.getElementById("ideaForm");
     this.ideaTextInput = document.getElementById("ideaText");
+    this.ideaTabs = document.getElementById("ideaTabs");
     this.ideasList = document.getElementById("ideasList");
     this.ideasEmpty = document.getElementById("ideasEmpty");
     this.logList = document.getElementById("logList");
@@ -545,6 +546,7 @@ class ProjectIdeaUI {
     this.animateIdeasOnNextRender = true;
     this.isLogVisible = true;
     this.logFilterValue = "";
+    this.ideaFilter = "todo";
 
     const initialTheme = this.themeService.init();
     this.updateThemeLabel(initialTheme);
@@ -652,6 +654,13 @@ class ProjectIdeaUI {
       this.animateIdeasOnNextRender = true;
       this.ideaTextInput.value = "";
       this.render();
+    });
+
+    this.ideaTabs.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-filter]");
+      if (!button) return;
+      this.ideaFilter = button.dataset.filter || "todo";
+      this.renderIdeas();
     });
 
     this.ideasList.addEventListener("click", (event) => {
@@ -957,6 +966,45 @@ class ProjectIdeaUI {
     document.body.removeChild(textarea);
   }
 
+  updateIdeaTabs(stats) {
+    const buttons = Array.from(this.ideaTabs.querySelectorAll("button[data-filter]"));
+    const counts = {
+      todo: stats.total - stats.done,
+      done: stats.done,
+      all: stats.total,
+    };
+    buttons.forEach((button) => {
+      const filter = button.dataset.filter;
+      const isActive = filter === this.ideaFilter;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-pressed", isActive);
+      const countSpan = button.querySelector(".tab-count");
+      if (countSpan && filter in counts) {
+        countSpan.textContent = counts[filter];
+      }
+    });
+  }
+
+  filterIdeas(ideas) {
+    if (this.ideaFilter === "done") {
+      return ideas.filter((idea) => idea.done);
+    }
+    if (this.ideaFilter === "all") {
+      return ideas;
+    }
+    return ideas.filter((idea) => !idea.done);
+  }
+
+  getIdeasEmptyMessage() {
+    if (this.ideaFilter === "done") {
+      return "No finished ideas yet.";
+    }
+    if (this.ideaFilter === "all") {
+      return "Add an idea and keep the momentum going.";
+    }
+    return "Add an idea and keep the momentum going.";
+  }
+
   render() {
     this.renderProjects();
     this.renderIdeas();
@@ -1041,12 +1089,15 @@ class ProjectIdeaUI {
       this.progressFill.style.width = "0%";
       this.progressLabel.textContent = "0%";
       this.ideaForm.classList.add("hidden");
+      this.ideaTabs.classList.add("hidden");
       this.ideasList.innerHTML = "";
       this.ideasEmpty.style.display = "block";
+      this.ideaFilter = "todo";
       return;
     }
 
     this.ideaForm.classList.remove("hidden");
+    this.ideaTabs.classList.remove("hidden");
     this.activeProjectName.textContent = project.name;
     const stats = project.stats();
     this.progressFill.style.width = `${stats.percent}%`;
@@ -1054,17 +1105,18 @@ class ProjectIdeaUI {
 
     this.ideasList.innerHTML = "";
 
-    const activeIdeas = project.ideas.filter((idea) => !idea.done);
+    this.updateIdeaTabs(stats);
+    const visibleIdeas = this.filterIdeas(project.ideas);
 
-    if (activeIdeas.length === 0) {
+    if (visibleIdeas.length === 0) {
       this.ideasEmpty.style.display = "block";
-      this.ideasEmpty.textContent = "Add an idea and keep the momentum going.";
+      this.ideasEmpty.textContent = this.getIdeasEmptyMessage();
       return;
     }
 
     this.ideasEmpty.style.display = "none";
 
-    activeIdeas.forEach((idea, index) => {
+    visibleIdeas.forEach((idea, index) => {
       const item = document.createElement("li");
       item.className = shouldAnimate ? "idea-item fade-in" : "idea-item";
       if (shouldAnimate) {

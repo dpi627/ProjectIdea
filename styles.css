@@ -395,6 +395,42 @@ button:hover {
   color: var(--muted);
 }
 
+.idea-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 2px 0px 0px 0px;
+}
+
+.tab-button {
+  border-radius: 999px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: none;
+}
+
+.tab-button .tab-count {
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.tab-button.is-active {
+  background: rgba(31, 138, 112, 0.12);
+  border-color: rgba(31, 138, 112, 0.4);
+  color: var(--accent);
+}
+
+.tab-button.is-active .tab-count {
+  color: var(--accent);
+}
+
 .ideas-list {
   list-style: none;
   padding: 0;
