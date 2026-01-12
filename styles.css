@@ -61,7 +61,7 @@ body {
 }
 
 .app-shell {
-  max-width: 1200px;
+  max-width: 85vw;
   margin: 0 auto;
   padding: 32px 24px 48px;
   position: relative;
@@ -119,7 +119,7 @@ body {
 
 .workspace {
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr) 260px;
+  grid-template-columns: 320px minmax(0, 1fr) 390px;
   gap: 22px;
   margin-top: 28px;
 }
