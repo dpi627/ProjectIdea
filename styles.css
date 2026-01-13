@@ -1117,6 +1117,10 @@ button:hover {
   padding: 0;
 }
 
+.limits-loading.hidden {
+  display: none;
+}
+
 .limits-loading-indicator {
   display: flex;
   gap: 6px;

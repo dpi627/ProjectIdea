@@ -612,7 +612,7 @@ class ProjectIdeaUI {
     this.dragOverIdea = null;
     const uiState = this.loadUiState();
     this.isLogVisible =
-      typeof uiState.isLogVisible === "boolean" ? uiState.isLogVisible : true;
+      typeof uiState.isLogVisible === "boolean" ? uiState.isLogVisible : false;
     this.activeProjectId = this.resolveActiveProjectId(uiState.activeProjectId);
 
     this.projectsList = document.getElementById("projectsList");
@@ -670,6 +670,7 @@ class ProjectIdeaUI {
     this.settingsProxyToggle = document.getElementById("settingsProxyToggle");
     this.settingsProxyUrlInput = document.getElementById("settingsProxyUrl");
     this.settingsUsageUrlInput = document.getElementById("settingsUsageUrl");
+    this.settingsIntervalInput = document.getElementById("settingsIntervalSec");
     this.settingsProxyForm = document.getElementById("settingsProxyForm");
     this.settingsThemeOptions = Array.from(
       document.querySelectorAll('input[name="themePreference"]')
@@ -726,7 +727,7 @@ class ProjectIdeaUI {
     this.serviceMonitorEnabled =
       typeof uiState.serviceMonitorEnabled === "boolean"
         ? uiState.serviceMonitorEnabled
-        : true;
+        : false;
     this.serviceMonitorUrl = this.normalizeProxyUrl(uiState.serviceMonitorUrl);
     const legacyUsageUrl = "http://localhost:8080/account-limits";
     const usageSource =
@@ -734,7 +735,11 @@ class ProjectIdeaUI {
         ? "http://localhost:8080/health"
         : uiState.modelUsageUrl;
     this.modelUsageUrl = this.normalizeModelUsageUrl(usageSource);
-    this.serviceMonitorIntervalMs = 5000;
+    this.serviceMonitorIntervalMs =
+      typeof uiState.serviceMonitorIntervalMs === "number" &&
+      uiState.serviceMonitorIntervalMs >= 1000
+        ? uiState.serviceMonitorIntervalMs
+        : 5000;
     this.serviceMonitorTimeoutMs = 2500;
     this.serviceMonitorTimer = null;
     this.serviceMonitorInFlight = false;
@@ -784,6 +789,7 @@ class ProjectIdeaUI {
       ideaFilter: this.ideaFilter,
       serviceMonitorEnabled: this.serviceMonitorEnabled,
       serviceMonitorUrl: this.serviceMonitorUrl,
+      serviceMonitorIntervalMs: this.serviceMonitorIntervalMs,
       modelUsageUrl: this.modelUsageUrl,
     };
   }
@@ -910,6 +916,11 @@ class ProjectIdeaUI {
     if (this.settingsUsageUrlInput) {
       this.settingsUsageUrlInput.value = this.modelUsageUrl;
     }
+    if (this.settingsIntervalInput) {
+      this.settingsIntervalInput.value = Math.round(
+        this.serviceMonitorIntervalMs / 1000
+      );
+    }
     if (this.settingsThemeOptions.length) {
       const preference = this.themeService.getCurrentTheme();
       this.settingsThemeOptions.forEach((option) => {
@@ -1013,6 +1024,21 @@ class ProjectIdeaUI {
     }
     this.serviceMonitorTimer = null;
     this.serviceMonitorInFlight = false;
+  }
+
+  setServiceMonitorInterval(seconds) {
+    const sec = Number(seconds);
+    if (!Number.isFinite(sec) || sec < 1) return;
+    const ms = Math.round(sec * 1000);
+    if (ms === this.serviceMonitorIntervalMs) return;
+    this.serviceMonitorIntervalMs = ms;
+    this.persistUiState();
+    if (this.serviceMonitorEnabled) {
+      this.startServiceMonitor();
+    }
+    if (this.settingsIntervalInput) {
+      this.settingsIntervalInput.value = sec;
+    }
   }
 
   applyThemePreference(preference) {
@@ -1255,9 +1281,12 @@ class ProjectIdeaUI {
       this.setLimitsLoading(false);
       this.renderLimits();
     } catch (error) {
-      this.setLimitsLoading(false);
       this.limitsHasData = false;
-      this.updateLimitsEmptyState("Loading model usage...", true);
+      this.limitsModels = [];
+      this.limitsList.innerHTML = "";
+      this.limitsCharts.forEach((chart) => chart.destroy());
+      this.limitsCharts.clear();
+      this.setLimitsLoading(true, "Reconnecting...");
       this.pushNotification({
         title: "Usage unavailable",
         message: "Check service status or proxy URL.",
@@ -1295,9 +1324,7 @@ class ProjectIdeaUI {
     this.limitsCharts.forEach((chart) => chart.destroy());
     this.limitsCharts.clear();
 
-    if (this.limitsHasData) {
-      this.setLimitsLoading(false);
-    }
+    this.setLimitsLoading(false);
 
     if (!visible.length) {
       if (!this.limitsIsLoading) {
@@ -1463,6 +1490,12 @@ class ProjectIdeaUI {
     }
     if (typeof uiState.modelUsageUrl === "string") {
       this.setModelUsageUrl(uiState.modelUsageUrl, { skipPersist: true });
+    }
+    if (
+      typeof uiState.serviceMonitorIntervalMs === "number" &&
+      uiState.serviceMonitorIntervalMs >= 1000
+    ) {
+      this.serviceMonitorIntervalMs = uiState.serviceMonitorIntervalMs;
     }
     if (typeof uiState.serviceMonitorEnabled === "boolean") {
       this.setServiceMonitorEnabled(uiState.serviceMonitorEnabled, {
@@ -2703,6 +2736,9 @@ class ProjectIdeaUI {
       this.setServiceMonitorUrl(this.settingsProxyUrlInput.value);
       if (this.settingsUsageUrlInput) {
         this.setModelUsageUrl(this.settingsUsageUrlInput.value);
+      }
+      if (this.settingsIntervalInput) {
+        this.setServiceMonitorInterval(this.settingsIntervalInput.value);
       }
       this.pushNotification({
         title: "Proxy updated",
