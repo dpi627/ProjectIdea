@@ -668,6 +668,7 @@ class ProjectIdeaUI {
     this.settingsImportButton = document.getElementById("settingsImport");
     this.settingsProxyToggle = document.getElementById("settingsProxyToggle");
     this.settingsProxyUrlInput = document.getElementById("settingsProxyUrl");
+    this.settingsUsageUrlInput = document.getElementById("settingsUsageUrl");
     this.settingsProxyForm = document.getElementById("settingsProxyForm");
     this.settingsThemeOptions = Array.from(
       document.querySelectorAll('input[name="themePreference"]')
@@ -723,6 +724,7 @@ class ProjectIdeaUI {
         ? uiState.serviceMonitorEnabled
         : true;
     this.serviceMonitorUrl = this.normalizeProxyUrl(uiState.serviceMonitorUrl);
+    this.modelUsageUrl = this.normalizeModelUsageUrl(uiState.modelUsageUrl);
     this.serviceMonitorIntervalMs = 5000;
     this.serviceMonitorTimeoutMs = 2500;
     this.serviceMonitorTimer = null;
@@ -773,6 +775,7 @@ class ProjectIdeaUI {
       ideaFilter: this.ideaFilter,
       serviceMonitorEnabled: this.serviceMonitorEnabled,
       serviceMonitorUrl: this.serviceMonitorUrl,
+      modelUsageUrl: this.modelUsageUrl,
     };
   }
 
@@ -851,6 +854,11 @@ class ProjectIdeaUI {
     return clean || "http://localhost:8080";
   }
 
+  normalizeModelUsageUrl(value) {
+    const clean = String(value || "").trim();
+    return clean || "http://localhost:8080/account-limits";
+  }
+
   exportData() {
     const data = this.buildExportPayload();
     const json = JSON.stringify(data, null, 2);
@@ -889,6 +897,9 @@ class ProjectIdeaUI {
   syncSettingsState() {
     if (this.settingsProxyUrlInput) {
       this.settingsProxyUrlInput.value = this.serviceMonitorUrl;
+    }
+    if (this.settingsUsageUrlInput) {
+      this.settingsUsageUrlInput.value = this.modelUsageUrl;
     }
     if (this.settingsThemeOptions.length) {
       const preference = this.themeService.getCurrentTheme();
@@ -938,6 +949,19 @@ class ProjectIdeaUI {
     }
     if (this.serviceMonitorEnabled) {
       this.checkServiceAlive(true);
+    }
+  }
+
+  setModelUsageUrl(url, { skipPersist = false } = {}) {
+    this.modelUsageUrl = this.normalizeModelUsageUrl(url);
+    if (this.settingsUsageUrlInput) {
+      this.settingsUsageUrlInput.value = this.modelUsageUrl;
+    }
+    if (!skipPersist) {
+      this.persistUiState();
+    }
+    if (this.limitsDialog?.open || this.limitsDialog?.hasAttribute("open")) {
+      this.fetchModelLimits();
     }
   }
 
@@ -995,8 +1019,7 @@ class ProjectIdeaUI {
   }
 
   getAccountLimitsUrl() {
-    const base = this.normalizeProxyUrl(this.serviceMonitorUrl || "");
-    return `${base.replace(/\/+$/, "")}/account-limits`;
+    return this.normalizeModelUsageUrl(this.modelUsageUrl);
   }
 
   async openLimitsDialog() {
@@ -1346,6 +1369,9 @@ class ProjectIdeaUI {
         : this.ideaFilter;
     if (typeof uiState.serviceMonitorUrl === "string") {
       this.setServiceMonitorUrl(uiState.serviceMonitorUrl, { skipPersist: true });
+    }
+    if (typeof uiState.modelUsageUrl === "string") {
+      this.setModelUsageUrl(uiState.modelUsageUrl, { skipPersist: true });
     }
     if (typeof uiState.serviceMonitorEnabled === "boolean") {
       this.setServiceMonitorEnabled(uiState.serviceMonitorEnabled, {
@@ -2009,7 +2035,7 @@ class ProjectIdeaUI {
         mode: "no-cors",
         signal: controller.signal,
       });
-      alive = response && (response.ok || response.type === "opaque");
+      alive = Boolean(response);
       this.updateServiceMonitor(alive ? "alive" : "offline");
     } catch (error) {
       this.updateServiceMonitor("offline");
@@ -2558,6 +2584,9 @@ class ProjectIdeaUI {
       event.preventDefault();
       if (!this.settingsProxyUrlInput) return;
       this.setServiceMonitorUrl(this.settingsProxyUrlInput.value);
+      if (this.settingsUsageUrlInput) {
+        this.setModelUsageUrl(this.settingsUsageUrlInput.value);
+      }
       this.pushNotification({
         title: "Proxy updated",
         message: this.serviceMonitorUrl,

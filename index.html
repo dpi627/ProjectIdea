@@ -294,7 +294,8 @@
     "isLogVisible": true,
     "ideaFilter": "todo",
     "serviceMonitorEnabled": true,
-    "serviceMonitorUrl": "http://localhost:8080"
+    "serviceMonitorUrl": "http://localhost:8080",
+    "modelUsageUrl": "http://localhost:8080/account-limits"
   }
 }</pre>
             </div>
@@ -316,6 +317,10 @@
               <label class="settings-field">
                 <span>Proxy URL</span>
                 <input id="settingsProxyUrl" type="text" placeholder="http://localhost:8080" />
+              </label>
+              <label class="settings-field">
+                <span>Model usage endpoint</span>
+                <input id="settingsUsageUrl" type="text" placeholder="http://localhost:8080/account-limits" />
               </label>
               <div class="settings-actions">
                 <button class="primary" type="submit">Apply</button>
