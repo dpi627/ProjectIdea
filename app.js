@@ -996,7 +996,7 @@ class ProjectIdeaUI {
 
   getAccountLimitsUrl() {
     const base = this.normalizeProxyUrl(this.serviceMonitorUrl || "");
-    return `${base.replace(/\\/+$/, "")}/account-limits`;
+    return `${base.replace(/\/+$/, "")}/account-limits`;
   }
 
   async openLimitsDialog() {
