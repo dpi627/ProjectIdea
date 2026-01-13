@@ -1043,6 +1043,128 @@ button:hover {
   gap: 10px;
 }
 
+.limits-card {
+  width: min(70vw, 1040px);
+  max-height: 80vh;
+  display: grid;
+  gap: 16px;
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.limits-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.limits-toolbar {
+  display: grid;
+  gap: 10px;
+}
+
+.limits-search input {
+  width: 100%;
+}
+
+.limits-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.filter-chip input {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.limits-body {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+  display: grid;
+  gap: 12px;
+}
+
+.limits-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.limits-card-item {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.limits-chart {
+  position: relative;
+  width: 80px;
+  height: 80px;
+}
+
+.limits-chart canvas {
+  width: 80px;
+  height: 80px;
+}
+
+.limits-percent {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.limits-title {
+  margin: 0;
+  font-size: 14px;
+}
+
+.limits-usage {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.limits-meta {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.limits-meta-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+  gap: 12px;
+}
+
+.limits-meta-row span:last-child {
+  color: var(--ink);
+}
+
 .settings-card {
   width: min(900px, 94vw);
   height: 80vh;
@@ -1406,6 +1528,21 @@ button:hover {
 
   .settings-tab {
     text-align: center;
+  }
+
+  .limits-card {
+    width: 94vw;
+  }
+
+  .limits-card-item {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .limits-meta-row {
+    flex-direction: column;
+    align-items: center;
   }
 
   .notify-stack {

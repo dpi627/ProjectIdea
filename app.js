@@ -648,6 +648,14 @@ class ProjectIdeaUI {
     this.logPieChart = document.getElementById("logPieChart");
     this.logChartNote = document.querySelector(".log-dialog-chart .chart-note");
     this.serviceMonitorButton = document.getElementById("serviceMonitor");
+    this.limitsDialog = document.getElementById("limitsDialog");
+    this.limitsClose = document.getElementById("limitsClose");
+    this.limitsSearch = document.getElementById("limitsSearch");
+    this.limitsFilterInputs = Array.from(
+      document.querySelectorAll(".limits-filters input[type='checkbox']")
+    );
+    this.limitsList = document.getElementById("limitsList");
+    this.limitsEmpty = document.getElementById("limitsEmpty");
     this.settingsDialog = document.getElementById("settingsDialog");
     this.settingsClose = document.getElementById("settingsClose");
     this.settingsMenuButtons = Array.from(
@@ -705,6 +713,11 @@ class ProjectIdeaUI {
     this.logPieChartInstance = null;
     this.logChartNoteBase = this.logChartNote?.textContent || "";
     this.chartJsPromise = null;
+    this.limitsModels = [];
+    this.limitsCharts = new Map();
+    this.limitsRefreshMs = 6000;
+    this.limitsTimer = null;
+    this.limitsInFlight = false;
     this.serviceMonitorEnabled =
       typeof uiState.serviceMonitorEnabled === "boolean"
         ? uiState.serviceMonitorEnabled
@@ -714,6 +727,7 @@ class ProjectIdeaUI {
     this.serviceMonitorTimeoutMs = 2500;
     this.serviceMonitorTimer = null;
     this.serviceMonitorInFlight = false;
+    this.serviceMonitorStatus = "checking";
     this.notifyLimit = 4;
     this.notifyDuration = 3200;
 
@@ -941,6 +955,9 @@ class ProjectIdeaUI {
       this.startServiceMonitor();
     } else {
       this.stopServiceMonitor();
+      if (this.limitsDialog?.open || this.limitsDialog?.hasAttribute("open")) {
+        this.closeLimitsDialog();
+      }
     }
     this.updateProxyToggle(this.serviceMonitorEnabled);
   }
@@ -972,6 +989,323 @@ class ProjectIdeaUI {
     if (this.logDialog.open || this.logDialog.hasAttribute("open")) {
       this.renderLogDialogChart();
     }
+    if (this.limitsDialog?.open || this.limitsDialog?.hasAttribute("open")) {
+      this.renderLimits();
+    }
+  }
+
+  getAccountLimitsUrl() {
+    const base = this.normalizeProxyUrl(this.serviceMonitorUrl || "");
+    return `${base.replace(/\\/+$/, "")}/account-limits`;
+  }
+
+  async openLimitsDialog() {
+    if (!this.limitsDialog || !this.serviceMonitorEnabled) return;
+    const alive = await this.checkServiceAlive(true);
+    if (!alive) {
+      this.pushNotification({
+        title: "Service offline",
+        message: "Cannot load model usage.",
+        tone: "warning",
+      });
+      return;
+    }
+    if (this.limitsDialog.open || this.limitsDialog.hasAttribute("open")) {
+      await this.fetchModelLimits();
+      this.startLimitsUpdates();
+      return;
+    }
+    if (typeof this.limitsDialog.showModal === "function") {
+      this.limitsDialog.showModal();
+    } else {
+      this.limitsDialog.setAttribute("open", "true");
+    }
+    this.updateLimitsEmptyState("Loading model usage...", true);
+    await this.fetchModelLimits();
+    this.startLimitsUpdates();
+  }
+
+  closeLimitsDialog() {
+    if (!this.limitsDialog) return;
+    if (this.limitsDialog.open) {
+      this.limitsDialog.close();
+    } else {
+      this.limitsDialog.removeAttribute("open");
+    }
+    this.stopLimitsUpdates();
+  }
+
+  startLimitsUpdates() {
+    if (this.limitsTimer) {
+      window.clearInterval(this.limitsTimer);
+    }
+    this.limitsTimer = window.setInterval(() => {
+      this.fetchModelLimits();
+    }, this.limitsRefreshMs);
+  }
+
+  stopLimitsUpdates() {
+    if (this.limitsTimer) {
+      window.clearInterval(this.limitsTimer);
+    }
+    this.limitsTimer = null;
+  }
+
+  normalizeLimitsPayload(payload) {
+    const items = [];
+    if (Array.isArray(payload)) {
+      payload.forEach((item) => items.push(item));
+    } else if (payload && typeof payload === "object") {
+      const list =
+        payload.models || payload.data || payload.usage || payload.items || null;
+      if (Array.isArray(list)) {
+        list.forEach((item) => items.push(item));
+      } else {
+        Object.entries(payload).forEach(([key, value]) => {
+          if (value && typeof value === "object") {
+            items.push({ name: key, ...value });
+          }
+        });
+      }
+    }
+    return items
+      .map((item) => {
+        const name = String(
+          item?.name || item?.model || item?.id || item?.key || ""
+        ).trim();
+        if (!name) return null;
+        const used = Number(
+          item?.used ??
+            item?.usage ??
+            item?.consumed ??
+            item?.usedTokens ??
+            item?.tokensUsed ??
+            item?.tokens_used ??
+            item?.requestCount ??
+            item?.requests
+        );
+        const limit = Number(
+          item?.limit ?? item?.quota ?? item?.max ?? item?.capacity
+        );
+        const rawPercent = Number(
+          item?.usagePercent ?? item?.usage_percent ?? item?.percent
+        );
+        const percent = Number.isFinite(rawPercent)
+          ? Math.max(0, Math.min(100, Math.round(rawPercent)))
+          : Number.isFinite(used) && Number.isFinite(limit) && limit > 0
+            ? Math.max(0, Math.min(100, Math.round((used / limit) * 100)))
+            : null;
+        const lastUsed =
+          item?.lastUsed ??
+          item?.last_used ??
+          item?.lastUsedAt ??
+          item?.last_used_at ??
+          item?.lastRequestAt;
+        const resetAt =
+          item?.quotaReset ??
+          item?.resetAt ??
+          item?.reset_at ??
+          item?.quota_reset ??
+          item?.quotaResetAt;
+        return {
+          name,
+          used: Number.isFinite(used) ? used : null,
+          limit: Number.isFinite(limit) ? limit : null,
+          percent,
+          lastUsed,
+          resetAt,
+        };
+      })
+      .filter(Boolean);
+  }
+
+  getModelCategory(name) {
+    const lower = name.toLowerCase();
+    if (lower.includes("claude")) return "claude";
+    if (lower.includes("gemini-3")) return "gemini-3";
+    if (lower.includes("gemini-2.5") || lower.includes("gemini-2_5")) {
+      return "gemini-2.5";
+    }
+    return "other";
+  }
+
+  getLimitsFilters() {
+    const active = new Set(
+      this.limitsFilterInputs.filter((input) => input.checked).map((input) => {
+        return input.dataset.filter;
+      })
+    );
+    const query = (this.limitsSearch?.value || "").trim().toLowerCase();
+    return { active, query };
+  }
+
+  updateLimitsEmptyState(message, show) {
+    if (!this.limitsEmpty) return;
+    const text = this.limitsEmpty.querySelector("p");
+    if (text && message) {
+      text.textContent = message;
+    }
+    this.limitsEmpty.classList.toggle("hidden", !show);
+  }
+
+  async fetchModelLimits() {
+    if (this.limitsInFlight) return;
+    this.limitsInFlight = true;
+    try {
+      const response = await fetch(
+        `${this.getAccountLimitsUrl()}?t=${Date.now()}`,
+        { cache: "no-store" }
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch account limits.");
+      }
+      const payload = await response.json();
+      this.limitsModels = this.normalizeLimitsPayload(payload);
+      this.updateServiceMonitor("alive");
+      this.renderLimits();
+    } catch (error) {
+      this.updateLimitsEmptyState("Unable to load usage right now.", true);
+      this.pushNotification({
+        title: "Usage unavailable",
+        message: "Check service status or proxy URL.",
+        tone: "warning",
+      });
+      this.updateServiceMonitor("offline");
+    } finally {
+      this.limitsInFlight = false;
+    }
+  }
+
+  renderLimits() {
+    if (!this.limitsList) return;
+    const { active, query } = this.getLimitsFilters();
+    const visible = this.limitsModels.filter((model) => {
+      if (query && !model.name.toLowerCase().includes(query)) {
+        return false;
+      }
+      if (active.size === 0) return true;
+      return active.has(this.getModelCategory(model.name));
+    });
+
+    this.limitsList.innerHTML = "";
+    this.limitsCharts.forEach((chart) => chart.destroy());
+    this.limitsCharts.clear();
+
+    if (!visible.length) {
+      const message = this.limitsModels.length
+        ? "No models match the current filters."
+        : "No model usage data available.";
+      this.updateLimitsEmptyState(message, true);
+      return;
+    }
+
+    this.updateLimitsEmptyState("", false);
+    const theme = this.getLogChartTheme();
+    const chartTasks = [];
+
+    visible.forEach((model) => {
+      const card = document.createElement("article");
+      card.className = "limits-card-item";
+
+      const chartWrap = document.createElement("div");
+      chartWrap.className = "limits-chart";
+
+      const canvas = document.createElement("canvas");
+      canvas.width = 80;
+      canvas.height = 80;
+      chartWrap.appendChild(canvas);
+
+      const percentLabel = document.createElement("span");
+      percentLabel.className = "limits-percent";
+      percentLabel.textContent =
+        model.percent !== null ? `${model.percent}%` : "—";
+      chartWrap.appendChild(percentLabel);
+
+      const info = document.createElement("div");
+      info.className = "limits-info";
+
+      const title = document.createElement("h4");
+      title.className = "limits-title";
+      title.textContent = model.name;
+      info.appendChild(title);
+
+      const usage = document.createElement("p");
+      usage.className = "limits-usage";
+      if (model.percent !== null && model.used !== null && model.limit !== null) {
+        usage.textContent = `${model.used} / ${model.limit} used`;
+      } else if (model.percent !== null) {
+        usage.textContent = `Usage ${model.percent}%`;
+      } else {
+        usage.textContent = "Usage data unavailable";
+      }
+      info.appendChild(usage);
+
+      const meta = document.createElement("div");
+      meta.className = "limits-meta";
+      const lastUsed = formatDate(model.lastUsed);
+      const resetAt = formatDate(model.resetAt);
+
+      const lastRow = document.createElement("div");
+      lastRow.className = "limits-meta-row";
+      const lastLabel = document.createElement("span");
+      lastLabel.textContent = "Last used";
+      const lastValue = document.createElement("span");
+      lastValue.textContent = lastUsed || "—";
+      lastRow.append(lastLabel, lastValue);
+
+      const resetRow = document.createElement("div");
+      resetRow.className = "limits-meta-row";
+      const resetLabel = document.createElement("span");
+      resetLabel.textContent = "Quota reset";
+      const resetValue = document.createElement("span");
+      resetValue.textContent = resetAt || "—";
+      resetRow.append(resetLabel, resetValue);
+
+      meta.append(lastRow, resetRow);
+      info.appendChild(meta);
+
+      card.append(chartWrap, info);
+      this.limitsList.appendChild(card);
+
+      chartTasks.push({ canvas, model, theme });
+    });
+
+    this.ensureChartJs().then((loaded) => {
+      if (!loaded) return;
+      chartTasks.forEach(({ canvas, model, theme: chartTheme }) => {
+        const percent = model.percent ?? 0;
+        const usedValue =
+          model.used !== null && model.limit !== null
+            ? model.used
+            : percent;
+        const limitValue =
+          model.used !== null && model.limit !== null
+            ? Math.max(model.limit - model.used, 0)
+            : Math.max(100 - percent, 0);
+        const chart = new Chart(canvas.getContext("2d"), {
+          type: "doughnut",
+          data: {
+            labels: ["Used", "Remaining"],
+            datasets: [
+              {
+                data: [usedValue, limitValue],
+                backgroundColor: [chartTheme.accent, chartTheme.border],
+                borderWidth: 0,
+              },
+            ],
+          },
+          options: {
+            responsive: false,
+            cutout: "72%",
+            plugins: {
+              legend: { display: false },
+              tooltip: { enabled: false },
+            },
+          },
+        });
+        this.limitsCharts.set(model.name, chart);
+      });
+    });
   }
 
   buildExportPayload() {
@@ -1622,7 +1956,7 @@ class ProjectIdeaUI {
     if (!this.serviceMonitorButton) return;
     this.serviceMonitorButton.addEventListener("click", () => {
       if (!this.serviceMonitorEnabled) return;
-      this.checkServiceAlive(true);
+      this.openLimitsDialog();
     });
     this.setServiceMonitorEnabled(this.serviceMonitorEnabled, {
       skipPersist: true,
@@ -1631,6 +1965,7 @@ class ProjectIdeaUI {
 
   updateServiceMonitor(state) {
     if (!this.serviceMonitorButton) return;
+    this.serviceMonitorStatus = state;
     this.serviceMonitorButton.classList.toggle("is-alive", state === "alive");
     this.serviceMonitorButton.classList.toggle(
       "is-checking",
@@ -1652,12 +1987,11 @@ class ProjectIdeaUI {
   }
 
   async checkServiceAlive(showChecking = false) {
-    if (
-      !this.serviceMonitorButton ||
-      !this.serviceMonitorEnabled ||
-      this.serviceMonitorInFlight
-    ) {
-      return;
+    if (!this.serviceMonitorButton || !this.serviceMonitorEnabled) {
+      return false;
+    }
+    if (this.serviceMonitorInFlight) {
+      return this.serviceMonitorStatus === "alive";
     }
     this.serviceMonitorInFlight = true;
     if (showChecking) {
@@ -1668,13 +2002,14 @@ class ProjectIdeaUI {
       () => controller.abort(),
       this.serviceMonitorTimeoutMs
     );
+    let alive = false;
     try {
       const response = await fetch(this.serviceMonitorUrl, {
         method: "GET",
         mode: "no-cors",
         signal: controller.signal,
       });
-      const alive = response && (response.ok || response.type === "opaque");
+      alive = response && (response.ok || response.type === "opaque");
       this.updateServiceMonitor(alive ? "alive" : "offline");
     } catch (error) {
       this.updateServiceMonitor("offline");
@@ -1682,6 +2017,7 @@ class ProjectIdeaUI {
       window.clearTimeout(timeoutId);
       this.serviceMonitorInFlight = false;
     }
+    return alive;
   }
 
   setDragOverTarget(type, element) {
@@ -2164,6 +2500,30 @@ class ProjectIdeaUI {
       if (event.target === this.confirmDialog) {
         this.closeConfirmDialog();
       }
+    });
+
+    this.limitsClose?.addEventListener("click", () => {
+      this.closeLimitsDialog();
+    });
+
+    this.limitsDialog?.addEventListener("click", (event) => {
+      if (event.target === this.limitsDialog) {
+        this.closeLimitsDialog();
+      }
+    });
+
+    this.limitsDialog?.addEventListener("close", () => {
+      this.stopLimitsUpdates();
+    });
+
+    this.limitsSearch?.addEventListener("input", () => {
+      this.renderLimits();
+    });
+
+    this.limitsFilterInputs.forEach((input) => {
+      input.addEventListener("change", () => {
+        this.renderLimits();
+      });
     });
 
     this.settingsClose?.addEventListener("click", () => {

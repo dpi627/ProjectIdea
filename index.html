@@ -198,6 +198,48 @@
     </form>
   </dialog>
 
+  <dialog id="limitsDialog" class="dialog limits-dialog">
+    <div class="dialog-card limits-card">
+      <div class="limits-header">
+        <div>
+          <p class="eyebrow">Usage</p>
+          <h3>Model usage</h3>
+        </div>
+        <button id="limitsClose" class="ghost" type="button">Close</button>
+      </div>
+      <div class="limits-toolbar">
+        <label class="limits-search">
+          <span class="sr-only">Filter models</span>
+          <input id="limitsSearch" type="text" placeholder="Filter models..." />
+        </label>
+        <div class="limits-filters" aria-label="Model filters">
+          <label class="filter-chip">
+            <input type="checkbox" data-filter="claude" checked />
+            <span>Claude</span>
+          </label>
+          <label class="filter-chip">
+            <input type="checkbox" data-filter="gemini-3" checked />
+            <span>Gemini-3</span>
+          </label>
+          <label class="filter-chip">
+            <input type="checkbox" data-filter="gemini-2.5" />
+            <span>Gemini-2.5</span>
+          </label>
+          <label class="filter-chip">
+            <input type="checkbox" data-filter="other" />
+            <span>Other</span>
+          </label>
+        </div>
+      </div>
+      <div class="limits-body">
+        <div id="limitsEmpty" class="empty-state">
+          <p>Loading model usage...</p>
+        </div>
+        <div id="limitsList" class="limits-grid"></div>
+      </div>
+    </div>
+  </dialog>
+
   <dialog id="settingsDialog" class="dialog settings-dialog">
     <div class="dialog-card settings-card">
       <div class="settings-header">
