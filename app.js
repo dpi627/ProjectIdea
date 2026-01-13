@@ -656,6 +656,7 @@ class ProjectIdeaUI {
     );
     this.limitsList = document.getElementById("limitsList");
     this.limitsEmpty = document.getElementById("limitsEmpty");
+    this.limitsLoading = document.getElementById("limitsLoading");
     this.settingsDialog = document.getElementById("settingsDialog");
     this.settingsClose = document.getElementById("settingsClose");
     this.settingsMenuButtons = Array.from(
@@ -719,12 +720,20 @@ class ProjectIdeaUI {
     this.limitsRefreshMs = 6000;
     this.limitsTimer = null;
     this.limitsInFlight = false;
+    this.limitsIsLoading = false;
+    this.limitsHasRendered = false;
+    this.limitsHasData = false;
     this.serviceMonitorEnabled =
       typeof uiState.serviceMonitorEnabled === "boolean"
         ? uiState.serviceMonitorEnabled
         : true;
     this.serviceMonitorUrl = this.normalizeProxyUrl(uiState.serviceMonitorUrl);
-    this.modelUsageUrl = this.normalizeModelUsageUrl(uiState.modelUsageUrl);
+    const legacyUsageUrl = "http://localhost:8080/account-limits";
+    const usageSource =
+      uiState.modelUsageUrl === legacyUsageUrl
+        ? "http://localhost:8080/health"
+        : uiState.modelUsageUrl;
+    this.modelUsageUrl = this.normalizeModelUsageUrl(usageSource);
     this.serviceMonitorIntervalMs = 5000;
     this.serviceMonitorTimeoutMs = 2500;
     this.serviceMonitorTimer = null;
@@ -851,12 +860,12 @@ class ProjectIdeaUI {
 
   normalizeProxyUrl(value) {
     const clean = String(value || "").trim();
-    return clean || "http://localhost:8080";
+    return clean || "http://localhost:8080/health";
   }
 
   normalizeModelUsageUrl(value) {
     const clean = String(value || "").trim();
-    return clean || "http://localhost:8080/account-limits";
+    return clean || "http://localhost:8080/health";
   }
 
   exportData() {
@@ -1018,6 +1027,19 @@ class ProjectIdeaUI {
     }
   }
 
+  setLimitsLoading(isLoading, message = "Loading model usage...") {
+    this.limitsIsLoading = Boolean(isLoading);
+    if (!this.limitsLoading) return;
+    this.limitsLoading.classList.toggle("hidden", !this.limitsIsLoading);
+    const text = this.limitsLoading.querySelector("p");
+    if (text && message) {
+      text.textContent = message;
+    }
+    if (this.limitsIsLoading) {
+      this.updateLimitsEmptyState("", false);
+    }
+  }
+
   getAccountLimitsUrl() {
     return this.normalizeModelUsageUrl(this.modelUsageUrl);
   }
@@ -1043,8 +1065,9 @@ class ProjectIdeaUI {
     } else {
       this.limitsDialog.setAttribute("open", "true");
     }
-    this.updateLimitsEmptyState("Loading model usage...", true);
-    await this.fetchModelLimits();
+    this.limitsHasRendered = false;
+    this.setLimitsLoading(true);
+    await this.fetchModelLimits({ showLoading: true });
     this.startLimitsUpdates();
   }
 
@@ -1076,19 +1099,31 @@ class ProjectIdeaUI {
 
   normalizeLimitsPayload(payload) {
     const items = [];
-    if (Array.isArray(payload)) {
-      payload.forEach((item) => items.push(item));
-    } else if (payload && typeof payload === "object") {
-      const list =
-        payload.models || payload.data || payload.usage || payload.items || null;
-      if (Array.isArray(list)) {
-        list.forEach((item) => items.push(item));
-      } else {
-        Object.entries(payload).forEach(([key, value]) => {
-          if (value && typeof value === "object") {
-            items.push({ name: key, ...value });
-          }
+    if (payload && typeof payload === "object") {
+      const account = Array.isArray(payload.accounts) ? payload.accounts[0] : null;
+      const accountModels = account?.limits || account?.models;
+      if (accountModels && typeof accountModels === "object") {
+        Object.entries(accountModels).forEach(([name, value]) => {
+          items.push({ name, ...value, lastUsed: account?.lastUsed });
         });
+      }
+    }
+
+    if (!items.length) {
+      if (Array.isArray(payload)) {
+        payload.forEach((item) => items.push(item));
+      } else if (payload && typeof payload === "object") {
+        const list =
+          payload.models || payload.data || payload.usage || payload.items || null;
+        if (Array.isArray(list)) {
+          list.forEach((item) => items.push(item));
+        } else {
+          Object.entries(payload).forEach(([key, value]) => {
+            if (value && typeof value === "object") {
+              items.push({ name: key, ...value });
+            }
+          });
+        }
       }
     }
     return items
@@ -1113,11 +1148,35 @@ class ProjectIdeaUI {
         const rawPercent = Number(
           item?.usagePercent ?? item?.usage_percent ?? item?.percent
         );
-        const percent = Number.isFinite(rawPercent)
+        const remainingFraction = Number(
+          item?.remainingFraction ?? item?.remaining_fraction
+        );
+        const remainingPercent =
+          typeof item?.remaining === "string" && item.remaining.includes("%")
+            ? Number.parseFloat(item.remaining)
+            : Number(item?.remaining);
+        const usedPercent = Number.isFinite(rawPercent)
           ? Math.max(0, Math.min(100, Math.round(rawPercent)))
-          : Number.isFinite(used) && Number.isFinite(limit) && limit > 0
-            ? Math.max(0, Math.min(100, Math.round((used / limit) * 100)))
+          : Number.isFinite(remainingFraction)
+            ? Math.max(
+                0,
+                Math.min(100, Math.round((1 - remainingFraction) * 100))
+              )
+            : Number.isFinite(remainingPercent)
+              ? Math.max(
+                  0,
+                  Math.min(100, Math.round(100 - remainingPercent))
+                )
+              : Number.isFinite(used) && Number.isFinite(limit) && limit > 0
+            ? Math.max(0, Math.min(100, Math.round((used / limit) * 100)))      
             : null;
+        const availablePercent = Number.isFinite(remainingFraction)
+          ? Math.max(0, Math.min(100, Math.round(remainingFraction * 100)))
+          : Number.isFinite(remainingPercent)
+            ? Math.max(0, Math.min(100, Math.round(remainingPercent)))
+            : Number.isFinite(usedPercent)
+              ? Math.max(0, Math.min(100, Math.round(100 - usedPercent)))
+              : null;
         const lastUsed =
           item?.lastUsed ??
           item?.last_used ??
@@ -1128,13 +1187,16 @@ class ProjectIdeaUI {
           item?.quotaReset ??
           item?.resetAt ??
           item?.reset_at ??
+          item?.resetTime ??
+          item?.reset_time ??
           item?.quota_reset ??
           item?.quotaResetAt;
         return {
           name,
           used: Number.isFinite(used) ? used : null,
           limit: Number.isFinite(limit) ? limit : null,
-          percent,
+          usedPercent,
+          availablePercent,
           lastUsed,
           resetAt,
         };
@@ -1168,12 +1230,16 @@ class ProjectIdeaUI {
     if (text && message) {
       text.textContent = message;
     }
-    this.limitsEmpty.classList.toggle("hidden", !show);
+    const shouldShow = show && !this.limitsIsLoading;
+    this.limitsEmpty.classList.toggle("hidden", !shouldShow);
   }
 
-  async fetchModelLimits() {
+  async fetchModelLimits({ showLoading = false } = {}) {
     if (this.limitsInFlight) return;
     this.limitsInFlight = true;
+    if (showLoading) {
+      this.setLimitsLoading(true);
+    }
     try {
       const response = await fetch(
         `${this.getAccountLimitsUrl()}?t=${Date.now()}`,
@@ -1184,10 +1250,14 @@ class ProjectIdeaUI {
       }
       const payload = await response.json();
       this.limitsModels = this.normalizeLimitsPayload(payload);
+      this.limitsHasData = this.limitsModels.length > 0;
       this.updateServiceMonitor("alive");
+      this.setLimitsLoading(false);
       this.renderLimits();
     } catch (error) {
-      this.updateLimitsEmptyState("Unable to load usage right now.", true);
+      this.setLimitsLoading(false);
+      this.limitsHasData = false;
+      this.updateLimitsEmptyState("Loading model usage...", true);
       this.pushNotification({
         title: "Usage unavailable",
         message: "Check service status or proxy URL.",
@@ -1195,6 +1265,9 @@ class ProjectIdeaUI {
       });
       this.updateServiceMonitor("offline");
     } finally {
+      if (showLoading) {
+        this.setLimitsLoading(false);
+      }
       this.limitsInFlight = false;
     }
   }
@@ -1202,23 +1275,37 @@ class ProjectIdeaUI {
   renderLimits() {
     if (!this.limitsList) return;
     const { active, query } = this.getLimitsFilters();
-    const visible = this.limitsModels.filter((model) => {
+    const visible = this.limitsModels
+      .filter((model) => {
       if (query && !model.name.toLowerCase().includes(query)) {
         return false;
       }
       if (active.size === 0) return true;
       return active.has(this.getModelCategory(model.name));
-    });
+      })
+      .sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, {
+          numeric: true,
+          sensitivity: "base",
+        })
+      );
 
+    const shouldAnimate = !this.limitsHasRendered;
     this.limitsList.innerHTML = "";
     this.limitsCharts.forEach((chart) => chart.destroy());
     this.limitsCharts.clear();
 
+    if (this.limitsHasData) {
+      this.setLimitsLoading(false);
+    }
+
     if (!visible.length) {
-      const message = this.limitsModels.length
-        ? "No models match the current filters."
-        : "No model usage data available.";
-      this.updateLimitsEmptyState(message, true);
+      if (!this.limitsIsLoading) {
+        const message = this.limitsModels.length
+          ? "No models match the current filters."
+          : "No model usage data available.";
+        this.updateLimitsEmptyState(message, true);
+      }
       return;
     }
 
@@ -1226,9 +1313,13 @@ class ProjectIdeaUI {
     const theme = this.getLogChartTheme();
     const chartTasks = [];
 
-    visible.forEach((model) => {
+    visible.forEach((model, index) => {
       const card = document.createElement("article");
       card.className = "limits-card-item";
+      if (shouldAnimate) {
+        card.classList.add("fade-in");
+        card.style.setProperty("--fade-delay", `${index * 70}ms`);
+      }
 
       const chartWrap = document.createElement("div");
       chartWrap.className = "limits-chart";
@@ -1238,10 +1329,14 @@ class ProjectIdeaUI {
       canvas.height = 80;
       chartWrap.appendChild(canvas);
 
+      const available = model.availablePercent;
+      const availableColor = this.getAvailabilityColor(available, theme);
+
       const percentLabel = document.createElement("span");
       percentLabel.className = "limits-percent";
       percentLabel.textContent =
-        model.percent !== null ? `${model.percent}%` : "—";
+        available !== null ? `${available}%` : "—";
+      percentLabel.style.color = availableColor;
       chartWrap.appendChild(percentLabel);
 
       const info = document.createElement("div");
@@ -1254,10 +1349,8 @@ class ProjectIdeaUI {
 
       const usage = document.createElement("p");
       usage.className = "limits-usage";
-      if (model.percent !== null && model.used !== null && model.limit !== null) {
-        usage.textContent = `${model.used} / ${model.limit} used`;
-      } else if (model.percent !== null) {
-        usage.textContent = `Usage ${model.percent}%`;
+      if (available !== null) {
+        usage.textContent = `Available ${available}%`;
       } else {
         usage.textContent = "Usage data unavailable";
       }
@@ -1290,29 +1383,24 @@ class ProjectIdeaUI {
       card.append(chartWrap, info);
       this.limitsList.appendChild(card);
 
-      chartTasks.push({ canvas, model, theme });
+      chartTasks.push({ canvas, model, theme, available, availableColor });
     });
 
     this.ensureChartJs().then((loaded) => {
       if (!loaded) return;
-      chartTasks.forEach(({ canvas, model, theme: chartTheme }) => {
-        const percent = model.percent ?? 0;
-        const usedValue =
-          model.used !== null && model.limit !== null
-            ? model.used
-            : percent;
-        const limitValue =
-          model.used !== null && model.limit !== null
-            ? Math.max(model.limit - model.used, 0)
-            : Math.max(100 - percent, 0);
+      chartTasks.forEach(({ canvas, model, theme: chartTheme, available, availableColor }) => {
+        const availableValue = Number.isFinite(available) ? available : 0;
+        const usedValue = Number.isFinite(available)
+          ? Math.max(100 - available, 0)
+          : 100;
         const chart = new Chart(canvas.getContext("2d"), {
           type: "doughnut",
           data: {
-            labels: ["Used", "Remaining"],
+            labels: ["Available", "Used"],
             datasets: [
               {
-                data: [usedValue, limitValue],
-                backgroundColor: [chartTheme.accent, chartTheme.border],
+                data: [availableValue, usedValue],
+                backgroundColor: [availableColor, chartTheme.border],
                 borderWidth: 0,
               },
             ],
@@ -1329,6 +1417,9 @@ class ProjectIdeaUI {
         this.limitsCharts.set(model.name, chart);
       });
     });
+    if (shouldAnimate) {
+      this.limitsHasRendered = true;
+    }
   }
 
   buildExportPayload() {
@@ -1711,6 +1802,32 @@ class ProjectIdeaUI {
       g: (int >> 8) & 255,
       b: int & 255,
     };
+  }
+
+  interpolateColor(start, end, t) {
+    const clamp = Math.max(0, Math.min(1, t));
+    const r = Math.round(start.r + (end.r - start.r) * clamp);
+    const g = Math.round(start.g + (end.g - start.g) * clamp);
+    const b = Math.round(start.b + (end.b - start.b) * clamp);
+    return `rgb(${r} ${g} ${b})`;
+  }
+
+  getAvailabilityColor(percent, theme) {
+    if (!Number.isFinite(percent)) return theme.muted;
+    const green = this.parseHexColor(theme.accent) || { r: 31, g: 138, b: 112 };
+    const yellow = this.parseHexColor(theme.accentAlt) || {
+      r: 233,
+      g: 180,
+      b: 76,
+    };
+    const red = { r: 209, g: 73, b: 91 };
+    if (percent >= 50) {
+      return this.interpolateColor(yellow, green, (percent - 50) / 50);
+    }
+    if (percent >= 25) {
+      return this.interpolateColor(red, yellow, (percent - 25) / 25);
+    }
+    return this.interpolateColor(red, red, 0);
   }
 
   rgbToHsl({ r, g, b }) {

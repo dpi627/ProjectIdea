@@ -232,7 +232,15 @@
         </div>
       </div>
       <div class="limits-body">
-        <div id="limitsEmpty" class="empty-state">
+        <div id="limitsLoading" class="limits-loading hidden" aria-live="polite">
+          <div class="limits-loading-indicator" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <p class="sr-only">Loading model usage...</p>
+        </div>
+        <div id="limitsEmpty" class="empty-state hidden">
           <p>Loading model usage...</p>
         </div>
         <div id="limitsList" class="limits-grid"></div>
@@ -294,8 +302,8 @@
     "isLogVisible": true,
     "ideaFilter": "todo",
     "serviceMonitorEnabled": true,
-    "serviceMonitorUrl": "http://localhost:8080",
-    "modelUsageUrl": "http://localhost:8080/account-limits"
+    "serviceMonitorUrl": "http://localhost:8080/health",
+    "modelUsageUrl": "http://localhost:8080/health"
   }
 }</pre>
             </div>
@@ -316,11 +324,11 @@
               </div>
               <label class="settings-field">
                 <span>Proxy URL</span>
-                <input id="settingsProxyUrl" type="text" placeholder="http://localhost:8080" />
+                <input id="settingsProxyUrl" type="text" placeholder="http://localhost:8080/health" />
               </label>
               <label class="settings-field">
                 <span>Model usage endpoint</span>
-                <input id="settingsUsageUrl" type="text" placeholder="http://localhost:8080/account-limits" />
+                <input id="settingsUsageUrl" type="text" placeholder="http://localhost:8080/health" />
               </label>
               <div class="settings-actions">
                 <button class="primary" type="submit">Apply</button>
