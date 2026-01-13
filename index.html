@@ -157,6 +157,16 @@
     </footer>
   </div>
 
+  <button
+    id="serviceMonitor"
+    class="service-monitor"
+    type="button"
+    aria-label="Service status"
+    title="Service status: Checking"
+  >
+    <span class="service-dot" aria-hidden="true"></span>
+  </button>
+
   <dialog id="editDialog" class="dialog">
     <form id="editForm" class="dialog-card" autocomplete="off">
       <h3 id="editTitle">Edit idea</h3>
@@ -255,7 +265,6 @@
     </div>
   </dialog>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

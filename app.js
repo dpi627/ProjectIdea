@@ -1,6 +1,8 @@
 const STORAGE_KEY = "project-idea-collection.v1";
 const THEME_KEY = "project-idea-collection.theme";
 const UI_STATE_KEY = "project-idea-collection.ui";
+const CHART_JS_SRC =
+  "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js";
 
 const createId = () => {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -570,6 +572,8 @@ class ProjectIdeaUI {
     this.themeService = themeService;
     this.background = background;
     this.dragState = { type: null, id: null };
+    this.dragOverProject = null;
+    this.dragOverIdea = null;
     const uiState = this.loadUiState();
     this.isLogVisible =
       typeof uiState.isLogVisible === "boolean" ? uiState.isLogVisible : true;
@@ -605,6 +609,7 @@ class ProjectIdeaUI {
     this.logChart = document.getElementById("logChart");
     this.logPieChart = document.getElementById("logPieChart");
     this.logChartNote = document.querySelector(".log-dialog-chart .chart-note");
+    this.serviceMonitorButton = document.getElementById("serviceMonitor");
 
     this.ideaForm = document.getElementById("ideaForm");
     this.ideaTextInput = document.getElementById("ideaText");
@@ -645,6 +650,12 @@ class ProjectIdeaUI {
     this.logChartInstance = null;
     this.logPieChartInstance = null;
     this.logChartNoteBase = this.logChartNote?.textContent || "";
+    this.chartJsPromise = null;
+    this.serviceMonitorUrl = "http://localhost:8080/";
+    this.serviceMonitorIntervalMs = 5000;
+    this.serviceMonitorTimeoutMs = 2500;
+    this.serviceMonitorTimer = null;
+    this.serviceMonitorInFlight = false;
 
     const initialTheme = this.themeService.init();
     this.updateThemeLabel(initialTheme);
@@ -652,6 +663,7 @@ class ProjectIdeaUI {
     this.applyLogVisibility();
     this.updateDataButtons();
     this.persistUiState();
+    this.initServiceMonitor();
 
     this.bindEvents();
     this.render();
@@ -713,8 +725,11 @@ class ProjectIdeaUI {
       this.logDialog.setAttribute("open", "true");
     }
     requestAnimationFrame(() => {
-      this.resizeLogChart();
-      this.renderLogDialogChart();
+      this.ensureChartJs().then((loaded) => {
+        if (!loaded) return;
+        this.resizeLogChart();
+        this.renderLogDialogChart();
+      });
     });
   }
 
@@ -953,6 +968,27 @@ class ProjectIdeaUI {
       });
     }
     return buckets;
+  }
+
+  ensureChartJs() {
+    if (typeof Chart !== "undefined") {
+      return Promise.resolve(true);
+    }
+    if (this.chartJsPromise) {
+      return this.chartJsPromise;
+    }
+    this.chartJsPromise = new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = CHART_JS_SRC;
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => {
+        this.chartJsPromise = null;
+        resolve(false);
+      };
+      document.head.appendChild(script);
+    });
+    return this.chartJsPromise;
   }
 
   getLogChartTheme() {
@@ -1194,7 +1230,15 @@ class ProjectIdeaUI {
   }
 
   renderLogDialogChart() {
-    if (!this.logChart || typeof Chart === "undefined") return;
+    if (!this.logChart) return;
+    if (typeof Chart === "undefined") {
+      this.ensureChartJs().then((loaded) => {
+        if (loaded) {
+          this.renderLogDialogChart();
+        }
+      });
+      return;
+    }
     const unit = this.logChartUnit?.value || this.logDialogChartUnit;
     const endDate = this.getChartEndDate();
     const buckets = this.buildLogDialogBucketsWindow(
@@ -1244,6 +1288,84 @@ class ProjectIdeaUI {
     pieChart.options.plugins.tooltip.bodyColor = theme.ink;
     pieChart.options.plugins.tooltip.borderColor = theme.border;
     pieChart.update();
+  }
+
+  initServiceMonitor() {
+    if (!this.serviceMonitorButton) return;
+    this.serviceMonitorButton.addEventListener("click", () => {
+      this.checkServiceAlive(true);
+    });
+    this.updateServiceMonitor("checking");
+    this.checkServiceAlive();
+    this.serviceMonitorTimer = window.setInterval(() => {
+      this.checkServiceAlive();
+    }, this.serviceMonitorIntervalMs);
+  }
+
+  updateServiceMonitor(state) {
+    if (!this.serviceMonitorButton) return;
+    this.serviceMonitorButton.classList.toggle("is-alive", state === "alive");
+    this.serviceMonitorButton.classList.toggle(
+      "is-checking",
+      state === "checking"
+    );
+    this.serviceMonitorButton.classList.toggle(
+      "is-offline",
+      state === "offline"
+    );
+    if (state === "alive") {
+      this.serviceMonitorButton.title = "Service status: Alive";
+      return;
+    }
+    if (state === "offline") {
+      this.serviceMonitorButton.title = "Service status: Offline";
+      return;
+    }
+    this.serviceMonitorButton.title = "Service status: Checking";
+  }
+
+  async checkServiceAlive(showChecking = false) {
+    if (!this.serviceMonitorButton || this.serviceMonitorInFlight) return;
+    this.serviceMonitorInFlight = true;
+    if (showChecking) {
+      this.updateServiceMonitor("checking");
+    }
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(
+      () => controller.abort(),
+      this.serviceMonitorTimeoutMs
+    );
+    try {
+      const response = await fetch(this.serviceMonitorUrl, {
+        method: "GET",
+        mode: "no-cors",
+        signal: controller.signal,
+      });
+      const alive = response && (response.ok || response.type === "opaque");
+      this.updateServiceMonitor(alive ? "alive" : "offline");
+    } catch (error) {
+      this.updateServiceMonitor("offline");
+    } finally {
+      window.clearTimeout(timeoutId);
+      this.serviceMonitorInFlight = false;
+    }
+  }
+
+  setDragOverTarget(type, element) {
+    const key = type === "project" ? "dragOverProject" : "dragOverIdea";
+    const current = this[key];
+    if (current && current !== element) {
+      current.classList.remove("drag-over");
+    }
+    if (!element) {
+      if (current) current.classList.remove("drag-over");
+      this[key] = null;
+      return;
+    }
+    if (current !== element) {
+      element.classList.add("drag-over");
+      this[key] = element;
+    }
   }
 
   bindEvents() {
@@ -1311,6 +1433,7 @@ class ProjectIdeaUI {
       const card = event.target.closest(".project-card");
       if (!card) return;
       this.dragState = { type: "project", id: card.dataset.id };
+      this.setDragOverTarget("project", null);
       card.classList.add("dragging");
       event.dataTransfer.effectAllowed = "move";
       event.dataTransfer.setData("text/plain", card.dataset.id);
@@ -1319,6 +1442,7 @@ class ProjectIdeaUI {
     this.projectsList.addEventListener("dragend", (event) => {
       const card = event.target.closest(".project-card");
       card?.classList.remove("dragging");
+      this.setDragOverTarget("project", null);
       this.dragState = { type: null, id: null };
     });
 
@@ -1326,6 +1450,8 @@ class ProjectIdeaUI {
       const card = event.target.closest(".project-card");
       if (!card || this.dragState.type !== "project") return;
       event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      this.setDragOverTarget("project", card);
     });
 
     this.projectsList.addEventListener("drop", (event) => {
@@ -1333,6 +1459,7 @@ class ProjectIdeaUI {
       if (!card || this.dragState.type !== "project") return;
       event.preventDefault();
       this.service.moveProject(this.dragState.id, card.dataset.id);
+      this.setDragOverTarget("project", null);
       this.render();
     });
 
@@ -1419,6 +1546,7 @@ class ProjectIdeaUI {
       const item = event.target.closest(".idea-item");
       if (!item) return;
       this.dragState = { type: "idea", id: item.dataset.id };
+      this.setDragOverTarget("idea", null);
       item.classList.add("dragging");
       event.dataTransfer.effectAllowed = "move";
       event.dataTransfer.setData("text/plain", item.dataset.id);
@@ -1427,6 +1555,7 @@ class ProjectIdeaUI {
     this.ideasList.addEventListener("dragend", (event) => {
       const item = event.target.closest(".idea-item");
       item?.classList.remove("dragging");
+      this.setDragOverTarget("idea", null);
       this.dragState = { type: null, id: null };
     });
 
@@ -1434,6 +1563,8 @@ class ProjectIdeaUI {
       const item = event.target.closest(".idea-item");
       if (!item || this.dragState.type !== "idea") return;
       event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      this.setDragOverTarget("idea", item);
     });
 
     this.ideasList.addEventListener("drop", (event) => {
@@ -1441,6 +1572,7 @@ class ProjectIdeaUI {
       if (!item || this.dragState.type !== "idea" || !this.activeProjectId) return;
       event.preventDefault();
       this.service.moveIdeaTo(this.activeProjectId, this.dragState.id, item.dataset.id);
+      this.setDragOverTarget("idea", null);
       this.render();
     });
 
