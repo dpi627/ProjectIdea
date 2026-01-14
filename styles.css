@@ -1114,7 +1114,7 @@ button:hover {
   display: grid;
   place-items: center;
   gap: 8px;
-  padding: 0;
+  padding: 5rem;
 }
 
 .limits-loading.hidden {
