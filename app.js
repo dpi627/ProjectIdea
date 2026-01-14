@@ -1,7 +1,7 @@
 const STORAGE_KEY = "project-idea-collection.v1";
 const THEME_KEY = "project-idea-collection.theme";
 const UI_STATE_KEY = "project-idea-collection.ui";
-const APP_VERSION = "20260114141758";
+const APP_VERSION = "20260114160000";
 const DEFAULT_UPDATE_CHECK_INTERVAL_MS = 60_000;
 const MIN_UPDATE_CHECK_INTERVAL_MS = 10_000;
 const MAX_UPDATE_CHECK_INTERVAL_MS = 3_600_000;
@@ -1217,6 +1217,13 @@ class ProjectIdeaUI {
         }
       }
     }
+    const toPercentValue = (value) => {
+      if (typeof value === "string" && value.includes("%")) {
+        return Number.parseFloat(value);
+      }
+      return Number(value);
+    };
+
     return items
       .map((item) => {
         const name = String(
@@ -1233,19 +1240,22 @@ class ProjectIdeaUI {
             item?.requestCount ??
             item?.requests
         );
-        const limit = Number(
-          item?.limit ?? item?.quota ?? item?.max ?? item?.capacity
-        );
-        const rawPercent = Number(
-          item?.usagePercent ?? item?.usage_percent ?? item?.percent
+        const limitValue =
+          item?.limit ?? item?.quota ?? item?.max ?? item?.capacity;
+        const limit = Number(limitValue);
+        const rawPercent = toPercentValue(
+          item?.usagePercent ??
+            item?.usage_percent ??
+            item?.usedPercent ??
+            item?.used_percent ??
+            item?.percent
         );
         const remainingFraction = Number(
           item?.remainingFraction ?? item?.remaining_fraction
         );
-        const remainingPercent =
-          typeof item?.remaining === "string" && item.remaining.includes("%")
-            ? Number.parseFloat(item.remaining)
-            : Number(item?.remaining);
+        const remainingPercent = toPercentValue(
+          item?.remainingPercent ?? item?.remaining_percent ?? item?.remaining
+        );
         const usedPercent = Number.isFinite(rawPercent)
           ? Math.max(0, Math.min(100, Math.round(rawPercent)))
           : Number.isFinite(remainingFraction)
@@ -1261,13 +1271,21 @@ class ProjectIdeaUI {
               : Number.isFinite(used) && Number.isFinite(limit) && limit > 0
             ? Math.max(0, Math.min(100, Math.round((used / limit) * 100)))      
             : null;
-        const availablePercent = Number.isFinite(remainingFraction)
+        let availablePercent = Number.isFinite(remainingFraction)
           ? Math.max(0, Math.min(100, Math.round(remainingFraction * 100)))
           : Number.isFinite(remainingPercent)
             ? Math.max(0, Math.min(100, Math.round(remainingPercent)))
             : Number.isFinite(usedPercent)
               ? Math.max(0, Math.min(100, Math.round(100 - usedPercent)))
               : null;
+        if (
+          !Number.isFinite(availablePercent) &&
+          limitValue !== null &&
+          limitValue !== undefined &&
+          limit === 0
+        ) {
+          availablePercent = 0;
+        }
         const lastUsed =
           item?.lastUsed ??
           item?.last_used ??
