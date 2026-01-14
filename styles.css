@@ -1500,6 +1500,53 @@ button:hover {
   justify-items: center;
 }
 
+.footer-features {
+  overflow-x: auto;
+  overflow-y: hidden;
+  position: relative;
+  cursor: grab;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  -ms-overflow-style: none;
+  touch-action: pan-y;
+}
+
+.footer-features::-webkit-scrollbar {
+  display: none;
+}
+
+.footer-features.is-dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.footer-features-track {
+  display: flex;
+  align-items: stretch;
+  width: max-content;
+  animation: footerMarquee 42s linear infinite;
+  will-change: transform;
+}
+
+.footer-features:hover .footer-features-track {
+  animation-play-state: paused;
+}
+
+.footer-features.is-dragging .footer-features-track {
+  animation-play-state: paused;
+}
+
+.footer-features-group {
+  display: flex;
+  gap: 12px;
+  padding-right: 12px;
+}
+
+.footer-features .footer-item {
+  min-width: 210px;
+  flex: 0 0 auto;
+}
+
 .footer-meta {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1511,6 +1558,13 @@ button:hover {
   border-radius: 14px;
   background: var(--surface-2);
   border: 1px solid var(--border);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.footer-item:hover,
+.footer-item:focus-within {
+  border-color: rgba(31, 138, 112, 0.6);
 }
 
 .footer-label {
@@ -1526,6 +1580,22 @@ button:hover {
   font-size: 12px;
   color: var(--ink);
   line-height: 1.4;
+}
+
+@keyframes footerMarquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(calc(-1 * var(--marquee-distance, 50%)));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .footer-features-track {
+    animation: none;
+    transform: none;
+  }
 }
 
 @media (max-width: 1100px) {

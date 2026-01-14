@@ -1,7 +1,7 @@
 const STORAGE_KEY = "project-idea-collection.v1";
 const THEME_KEY = "project-idea-collection.theme";
 const UI_STATE_KEY = "project-idea-collection.ui";
-const APP_VERSION = "20260114160000";
+const APP_VERSION = "20260114174000";
 const DEFAULT_UPDATE_CHECK_INTERVAL_MS = 60_000;
 const MIN_UPDATE_CHECK_INTERVAL_MS = 10_000;
 const MAX_UPDATE_CHECK_INTERVAL_MS = 3_600_000;
@@ -637,6 +637,7 @@ class ProjectIdeaUI {
     this.workspace = document.querySelector(".workspace");
     this.logPanel = document.querySelector(".log-panel");
     this.logViewAll = document.getElementById("logViewAll");
+    this.footerFeatures = document.getElementById("footerFeatures");
     this.logDialog = document.getElementById("logDialog");
     this.logDialogClose = document.getElementById("logDialogClose");
     this.logDialogSearch = document.getElementById("logDialogSearch");
@@ -2378,6 +2379,80 @@ class ProjectIdeaUI {
     }
   }
 
+  syncFooterFeatures() {
+    if (!this.footerFeatures) return;
+    const track = this.footerFeatures.querySelector(".footer-features-track");
+    const baseGroup = track?.querySelector(".footer-features-group");
+    if (!track || !baseGroup) return;
+    const groups = Array.from(track.querySelectorAll(".footer-features-group"));
+    groups.slice(1).forEach((group) => group.remove());
+    const groupWidth = baseGroup.getBoundingClientRect().width;
+    if (!groupWidth) return;
+    const containerWidth = this.footerFeatures.clientWidth;
+    const minGroups = Math.max(
+      2,
+      Math.ceil((containerWidth + groupWidth) / groupWidth)
+    );
+    for (let i = 1; i < minGroups; i += 1) {
+      const clone = baseGroup.cloneNode(true);
+      clone.setAttribute("aria-hidden", "true");
+      track.appendChild(clone);
+    }
+    track.style.setProperty("--marquee-distance", `${groupWidth}px`);
+  }
+
+  initFooterFeatures() {
+    if (!this.footerFeatures) return;
+    this.syncFooterFeatures();
+    let isDragging = false;
+    let startX = 0;
+    let startScroll = 0;
+
+    const handlePointerDown = (event) => {
+      if (event.button !== 0) return;
+      isDragging = true;
+      startX = event.clientX;
+      startScroll = this.footerFeatures.scrollLeft;
+      this.footerFeatures.classList.add("is-dragging");
+      this.footerFeatures.setPointerCapture?.(event.pointerId);
+    };
+
+    const handlePointerMove = (event) => {
+      if (!isDragging) return;
+      const delta = event.clientX - startX;
+      this.footerFeatures.scrollLeft = startScroll - delta;
+    };
+
+    const stopDragging = (event) => {
+      if (!isDragging) return;
+      isDragging = false;
+      this.footerFeatures.classList.remove("is-dragging");
+      this.footerFeatures.releasePointerCapture?.(event.pointerId);
+    };
+
+    this.footerFeatures.addEventListener("pointerdown", handlePointerDown);
+    this.footerFeatures.addEventListener("pointermove", handlePointerMove);
+    this.footerFeatures.addEventListener("pointerup", stopDragging);
+    this.footerFeatures.addEventListener("pointercancel", stopDragging);
+    this.footerFeatures.addEventListener("pointerleave", stopDragging);
+    this.footerFeatures.addEventListener(
+      "wheel",
+      (event) => {
+        const { deltaX, deltaY } = event;
+        if (deltaX === 0 && deltaY === 0) return;
+        const delta =
+          Math.abs(deltaX) > Math.abs(deltaY) ? deltaX : deltaY;
+        this.footerFeatures.scrollLeft += delta;
+        event.preventDefault();
+      },
+      { passive: false }
+    );
+
+    window.addEventListener("resize", () => {
+      this.syncFooterFeatures();
+    });
+  }
+
   bindEvents() {
     this.dialogs.forEach((dialog) => {
       dialog.addEventListener("close", () => {
@@ -2957,6 +3032,8 @@ class ProjectIdeaUI {
         this.syncSettingsState();
       });
     });
+
+    this.initFooterFeatures();
   }
 
   updateThemeLabel(theme) {
