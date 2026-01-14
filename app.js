@@ -1,7 +1,7 @@
 const STORAGE_KEY = "project-idea-collection.v1";
 const THEME_KEY = "project-idea-collection.theme";
 const UI_STATE_KEY = "project-idea-collection.ui";
-const APP_VERSION = "20260114174000";
+const APP_VERSION = "20260114180000";
 const DEFAULT_UPDATE_CHECK_INTERVAL_MS = 60_000;
 const MIN_UPDATE_CHECK_INTERVAL_MS = 10_000;
 const MAX_UPDATE_CHECK_INTERVAL_MS = 3_600_000;
@@ -3170,9 +3170,7 @@ class ProjectIdeaUI {
 
   openUpdateDialog(version) {
     if (!this.updateDialog) return;
-    const message = version
-      ? `A new version (${version}) is available. Refresh to update.`
-      : "A new version is available. Refresh to update.";
+    const message = "A new version is available. Refresh to update.";
     if (this.updateMessage) {
       this.updateMessage.textContent = message;
     }
