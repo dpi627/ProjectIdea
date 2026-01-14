@@ -9,7 +9,7 @@
     type="image/svg+xml"
     href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMxZjhhNzAiLz48cG9seWdvbiBwb2ludHM9IjMyIDEwIDU0IDMyIDMyIDU0IDEwIDMyIiBmaWxsPSIjZmZmZmZmIi8+PC9zdmc+"
   />
-  <link rel="stylesheet" href="styles.css?v=20250308120000" />
+  <link rel="stylesheet" href="styles.css?v=20250308123000" />
 </head>
 <body>
   <canvas id="bgCanvas" aria-hidden="true"></canvas>
@@ -262,6 +262,7 @@
           <button class="settings-tab is-active" type="button" data-panel="data" aria-pressed="true">Data</button>
           <button class="settings-tab" type="button" data-panel="proxy" aria-pressed="false">Proxy</button>
           <button class="settings-tab" type="button" data-panel="theme" aria-pressed="false">Theme</button>
+          <button class="settings-tab" type="button" data-panel="system" aria-pressed="false">System</button>
         </div>
         <div class="settings-content">
           <section class="settings-panel is-active" data-panel="data" aria-hidden="false">
@@ -314,6 +315,7 @@
     "serviceMonitorEnabled": false,
     "serviceMonitorUrl": "http://localhost:8080/health",
     "serviceMonitorIntervalMs": 5000,
+    "updateCheckIntervalMs": 60000,
     "modelUsageUrl": "http://localhost:8080/health"
   }
 }</pre>
@@ -377,6 +379,24 @@
                 </label>
               </div>
             </div>
+          </section>
+          <section class="settings-panel" data-panel="system" aria-hidden="true">
+            <form id="settingsUpdateForm" class="settings-section" autocomplete="off">
+              <div class="settings-row">
+                <div>
+                  <h4>Upgrade checks</h4>
+                  <p class="settings-help">Adjust how often the app checks for updates.</p>
+                </div>
+              </div>
+              <label class="settings-field">
+                <span>Check upgrade interval (seconds)</span>
+                <input id="settingsUpdateIntervalSec" type="number" min="10" max="3600" step="1" placeholder="60" />
+              </label>
+              <div class="settings-actions">
+                <button class="primary" type="submit">Apply</button>
+                <button id="settingsUpdateNow" class="ghost" type="button">Check now</button>
+              </div>
+            </form>
           </section>
         </div>
       </div>
@@ -452,6 +472,6 @@
     </div>
   </dialog>
 
-  <script src="app.js?v=20250308120000"></script>
+  <script src="app.js?v=20250308123000"></script>
 </body>
 </html>

@@ -1,8 +1,10 @@
 const STORAGE_KEY = "project-idea-collection.v1";
 const THEME_KEY = "project-idea-collection.theme";
 const UI_STATE_KEY = "project-idea-collection.ui";
-const APP_VERSION = "20250308120000";
-const VERSION_CHECK_INTERVAL = 60_000;
+const APP_VERSION = "20250308123000";
+const DEFAULT_UPDATE_CHECK_INTERVAL_MS = 60_000;
+const MIN_UPDATE_CHECK_INTERVAL_MS = 10_000;
+const MAX_UPDATE_CHECK_INTERVAL_MS = 3_600_000;
 const CHART_JS_SRC =
   "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js";
 
@@ -675,6 +677,11 @@ class ProjectIdeaUI {
     this.settingsUsageUrlInput = document.getElementById("settingsUsageUrl");
     this.settingsIntervalInput = document.getElementById("settingsIntervalSec");
     this.settingsProxyForm = document.getElementById("settingsProxyForm");
+    this.settingsUpdateForm = document.getElementById("settingsUpdateForm");
+    this.settingsUpdateIntervalInput = document.getElementById(
+      "settingsUpdateIntervalSec"
+    );
+    this.settingsUpdateNowButton = document.getElementById("settingsUpdateNow");
     this.settingsThemeOptions = Array.from(
       document.querySelectorAll('input[name="themePreference"]')
     );
@@ -727,6 +734,9 @@ class ProjectIdeaUI {
     this.limitsIsLoading = false;
     this.limitsHasRendered = false;
     this.limitsHasData = false;
+    this.updateCheckIntervalMs = this.normalizeUpdateCheckIntervalMs(
+      uiState.updateCheckIntervalMs
+    );
     this.updatePrompted = false;
     this.updateTimer = null;
     this.serviceMonitorEnabled =
@@ -796,6 +806,7 @@ class ProjectIdeaUI {
       serviceMonitorEnabled: this.serviceMonitorEnabled,
       serviceMonitorUrl: this.serviceMonitorUrl,
       serviceMonitorIntervalMs: this.serviceMonitorIntervalMs,
+      updateCheckIntervalMs: this.updateCheckIntervalMs,
       modelUsageUrl: this.modelUsageUrl,
     };
   }
@@ -880,6 +891,19 @@ class ProjectIdeaUI {
     return clean || "http://localhost:8080/health";
   }
 
+  normalizeUpdateCheckIntervalMs(value) {
+    if (value === null || value === undefined) {
+      return DEFAULT_UPDATE_CHECK_INTERVAL_MS;
+    }
+    const ms = Number(value);
+    if (!Number.isFinite(ms)) return DEFAULT_UPDATE_CHECK_INTERVAL_MS;
+    const clamped = Math.min(
+      MAX_UPDATE_CHECK_INTERVAL_MS,
+      Math.max(MIN_UPDATE_CHECK_INTERVAL_MS, Math.round(ms))
+    );
+    return clamped;
+  }
+
   exportData() {
     const data = this.buildExportPayload();
     const json = JSON.stringify(data, null, 2);
@@ -925,6 +949,11 @@ class ProjectIdeaUI {
     if (this.settingsIntervalInput) {
       this.settingsIntervalInput.value = Math.round(
         this.serviceMonitorIntervalMs / 1000
+      );
+    }
+    if (this.settingsUpdateIntervalInput) {
+      this.settingsUpdateIntervalInput.value = Math.round(
+        this.updateCheckIntervalMs / 1000
       );
     }
     if (this.settingsThemeOptions.length) {
@@ -1502,6 +1531,11 @@ class ProjectIdeaUI {
       uiState.serviceMonitorIntervalMs >= 1000
     ) {
       this.serviceMonitorIntervalMs = uiState.serviceMonitorIntervalMs;
+    }
+    if (typeof uiState.updateCheckIntervalMs === "number") {
+      this.setUpdateCheckInterval(uiState.updateCheckIntervalMs / 1000, {
+        skipPersist: true,
+      });
     }
     if (typeof uiState.serviceMonitorEnabled === "boolean") {
       this.setServiceMonitorEnabled(uiState.serviceMonitorEnabled, {
@@ -2135,29 +2169,79 @@ class ProjectIdeaUI {
   }
 
   initUpdateMonitor() {
+    this.startUpdateMonitor();
+  }
+
+  startUpdateMonitor() {
+    if (this.updateTimer) {
+      window.clearInterval(this.updateTimer);
+    }
     this.checkForUpdate();
     this.updateTimer = window.setInterval(
       () => this.checkForUpdate(),
-      VERSION_CHECK_INTERVAL
+      this.updateCheckIntervalMs
     );
   }
 
-  async checkForUpdate() {
-    if (this.updatePrompted) return;
+  setUpdateCheckInterval(seconds, { skipPersist = false } = {}) {
+    const sec = Number(seconds);
+    if (!Number.isFinite(sec)) return;
+    const ms = this.normalizeUpdateCheckIntervalMs(sec * 1000);
+    if (ms === this.updateCheckIntervalMs) {
+      if (this.settingsUpdateIntervalInput) {
+        this.settingsUpdateIntervalInput.value = Math.round(ms / 1000);
+      }
+      return;
+    }
+    this.updateCheckIntervalMs = ms;
+    if (this.settingsUpdateIntervalInput) {
+      this.settingsUpdateIntervalInput.value = Math.round(ms / 1000);
+    }
+    if (!skipPersist) {
+      this.persistUiState();
+    }
+    this.startUpdateMonitor();
+  }
+
+  async checkForUpdate({ force = false, showUpToDate = false } = {}) {
+    if (this.updatePrompted && !force) return;
     try {
       const response = await fetch(`version.json?v=${Date.now()}`, {
         cache: "no-store",
       });
-      if (!response.ok) return;
+      if (!response.ok) {
+        if (showUpToDate) {
+          this.pushNotification({
+            title: "Update check failed",
+            message: "Unable to reach the update endpoint.",
+            tone: "warning",
+          });
+        }
+        return;
+      }
       const data = await response.json();
       if (data && data.version && data.version !== APP_VERSION) {
         this.updatePrompted = true;
         if (window.confirm("有新版本可用，是否重新整理？")) {
           window.location.reload();
         }
+        return;
+      }
+      if (showUpToDate) {
+        this.pushNotification({
+          title: "Up to date",
+          message: "You're on the latest version.",
+          tone: "neutral",
+        });
       }
     } catch (error) {
-      // Ignore fetch errors; retry on next interval.
+      if (showUpToDate) {
+        this.pushNotification({
+          title: "Update check failed",
+          message: "Unable to reach the update endpoint.",
+          tone: "warning",
+        });
+      }
     }
   }
 
@@ -2778,6 +2862,22 @@ class ProjectIdeaUI {
         message: this.serviceMonitorUrl,
         tone: "neutral",
       });
+    });
+
+    this.settingsUpdateForm?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (!this.settingsUpdateIntervalInput) return;
+      this.setUpdateCheckInterval(this.settingsUpdateIntervalInput.value);
+      const seconds = Math.round(this.updateCheckIntervalMs / 1000);
+      this.pushNotification({
+        title: "Update interval saved",
+        message: `Checking every ${seconds}s.`,
+        tone: "neutral",
+      });
+    });
+
+    this.settingsUpdateNowButton?.addEventListener("click", () => {
+      this.checkForUpdate({ force: true, showUpToDate: true });
     });
 
     this.settingsThemeOptions.forEach((option) => {
