@@ -352,7 +352,7 @@ button:hover {
   width: min(360px, 92vw);
   display: grid;
   gap: 12px;
-  z-index: 3;
+  z-index: 30;
   pointer-events: none;
   transform: translateX(-50%);
 }
