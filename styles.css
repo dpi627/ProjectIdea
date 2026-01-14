@@ -517,6 +517,9 @@ button:hover {
   border: 1px solid var(--border);
   background: var(--surface-2);
   cursor: grab;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   transition: border-color 0.2s ease, transform 0.2s ease;
 }
 
@@ -528,14 +531,17 @@ button:hover {
 }
 
 .project-title-block {
+  flex: 1;
   display: grid;
   gap: 4px;
+  min-width: 0;
 }
 
 .project-title-row {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .project-live {
@@ -604,6 +610,8 @@ button:hover {
 .project-card h3 {
   font-size: 16px;
   margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .project-description {
