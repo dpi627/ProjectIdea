@@ -1,6 +1,8 @@
 const STORAGE_KEY = "project-idea-collection.v1";
 const THEME_KEY = "project-idea-collection.theme";
 const UI_STATE_KEY = "project-idea-collection.ui";
+const APP_VERSION = "20250308120000";
+const VERSION_CHECK_INTERVAL = 60_000;
 const CHART_JS_SRC =
   "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js";
 
@@ -10,6 +12,7 @@ const createId = () => {
   }
   return `id_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 };
+
 
 const formatDate = (value) => {
   if (!value) return "";
@@ -724,6 +727,8 @@ class ProjectIdeaUI {
     this.limitsIsLoading = false;
     this.limitsHasRendered = false;
     this.limitsHasData = false;
+    this.updatePrompted = false;
+    this.updateTimer = null;
     this.serviceMonitorEnabled =
       typeof uiState.serviceMonitorEnabled === "boolean"
         ? uiState.serviceMonitorEnabled
@@ -754,6 +759,7 @@ class ProjectIdeaUI {
     this.updateDataButtons();
     this.persistUiState();
     this.initServiceMonitor();
+    this.initUpdateMonitor();
 
     this.bindEvents();
     this.render();
@@ -2126,6 +2132,33 @@ class ProjectIdeaUI {
     pieChart.options.plugins.tooltip.bodyColor = theme.ink;
     pieChart.options.plugins.tooltip.borderColor = theme.border;
     pieChart.update();
+  }
+
+  initUpdateMonitor() {
+    this.checkForUpdate();
+    this.updateTimer = window.setInterval(
+      () => this.checkForUpdate(),
+      VERSION_CHECK_INTERVAL
+    );
+  }
+
+  async checkForUpdate() {
+    if (this.updatePrompted) return;
+    try {
+      const response = await fetch(`version.json?v=${Date.now()}`, {
+        cache: "no-store",
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+      if (data && data.version && data.version !== APP_VERSION) {
+        this.updatePrompted = true;
+        if (window.confirm("有新版本可用，是否重新整理？")) {
+          window.location.reload();
+        }
+      }
+    } catch (error) {
+      // Ignore fetch errors; retry on next interval.
+    }
   }
 
   initServiceMonitor() {
