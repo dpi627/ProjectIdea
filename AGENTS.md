@@ -18,6 +18,10 @@
 - When adding user-provided text to HTML, use `escapeHtml()` to avoid injection issues.
 - Prefer small, readable helpers over large inline blocks.
 
+## Versioning & Cache Busting
+- Update the timestamp version in `index.html`, `app.js`, and `version.json` on every change.
+- Keep the `?v=` query value in `index.html` synchronized with `APP_VERSION` in `app.js`.
+
 ## Testing Guidelines
 - No automated tests configured.
 - Manual checks to run after changes:
