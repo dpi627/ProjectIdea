@@ -1,7 +1,7 @@
 const STORAGE_KEY = "project-idea-collection.v1";
 const THEME_KEY = "project-idea-collection.theme";
 const UI_STATE_KEY = "project-idea-collection.ui";
-const APP_VERSION = "20250308123000";
+const APP_VERSION = "20250308133000";
 const DEFAULT_UPDATE_CHECK_INTERVAL_MS = 60_000;
 const MIN_UPDATE_CHECK_INTERVAL_MS = 10_000;
 const MAX_UPDATE_CHECK_INTERVAL_MS = 3_600_000;
@@ -685,6 +685,7 @@ class ProjectIdeaUI {
     this.settingsThemeOptions = Array.from(
       document.querySelectorAll('input[name="themePreference"]')
     );
+    this.dialogs = Array.from(document.querySelectorAll("dialog"));
 
     this.ideaForm = document.getElementById("ideaForm");
     this.ideaTextInput = document.getElementById("ideaText");
@@ -707,6 +708,11 @@ class ProjectIdeaUI {
     this.confirmMessage = document.getElementById("confirmMessage");
     this.confirmCancel = document.getElementById("confirmCancel");
     this.confirmConfirm = document.getElementById("confirmConfirm");
+    this.updateDialog = document.getElementById("updateDialog");
+    this.updateForm = document.getElementById("updateForm");
+    this.updateMessage = document.getElementById("updateMessage");
+    this.updateLater = document.getElementById("updateLater");
+    this.updateRefresh = document.getElementById("updateRefresh");
     this.editingIdeaId = null;
     this.editingProjectId = null;
     this.editingMode = null;
@@ -816,6 +822,25 @@ class ProjectIdeaUI {
     localStorage.setItem(UI_STATE_KEY, JSON.stringify(payload));
   }
 
+  getActiveDialog() {
+    if (!this.dialogs.length) return null;
+    for (let i = this.dialogs.length - 1; i >= 0; i -= 1) {
+      const dialog = this.dialogs[i];
+      if (dialog?.open || dialog?.hasAttribute("open")) {
+        return dialog;
+      }
+    }
+    return null;
+  }
+
+  syncNotifyLayer() {
+    if (!this.notifyStack) return;
+    const target = this.getActiveDialog() || document.body;
+    if (this.notifyStack.parentElement !== target) {
+      target.appendChild(this.notifyStack);
+    }
+  }
+
   formatNotificationText(text, maxLength = 70) {
     if (!text) return "";
     const clean = String(text).trim();
@@ -835,6 +860,7 @@ class ProjectIdeaUI {
 
   pushNotification({ title, message, tone = "info", duration } = {}) {
     if (!this.notifyStack || !title) return;
+    this.syncNotifyLayer();
     const toast = document.createElement("div");
     toast.className = "notify-toast";
     toast.dataset.tone = tone;
@@ -974,6 +1000,7 @@ class ProjectIdeaUI {
     } else {
       this.settingsDialog.setAttribute("open", "true");
     }
+    this.syncNotifyLayer();
   }
 
   closeSettingsDialog() {
@@ -983,6 +1010,7 @@ class ProjectIdeaUI {
     } else {
       this.settingsDialog.removeAttribute("open");
     }
+    this.syncNotifyLayer();
   }
 
   updateProxyToggle(isEnabled) {
@@ -1126,6 +1154,7 @@ class ProjectIdeaUI {
     } else {
       this.limitsDialog.setAttribute("open", "true");
     }
+    this.syncNotifyLayer();
     this.limitsHasRendered = false;
     this.setLimitsLoading(true);
     await this.fetchModelLimits({ showLoading: true });
@@ -1140,6 +1169,7 @@ class ProjectIdeaUI {
       this.limitsDialog.removeAttribute("open");
     }
     this.stopLimitsUpdates();
+    this.syncNotifyLayer();
   }
 
   startLimitsUpdates() {
@@ -1576,6 +1606,7 @@ class ProjectIdeaUI {
     } else {
       this.logDialog.setAttribute("open", "true");
     }
+    this.syncNotifyLayer();
     requestAnimationFrame(() => {
       this.ensureChartJs().then((loaded) => {
         if (!loaded) return;
@@ -1591,6 +1622,7 @@ class ProjectIdeaUI {
     } else {
       this.logDialog.removeAttribute("open");
     }
+    this.syncNotifyLayer();
   }
 
   updateLogDialogProjectFilter() {
@@ -2222,9 +2254,7 @@ class ProjectIdeaUI {
       const data = await response.json();
       if (data && data.version && data.version !== APP_VERSION) {
         this.updatePrompted = true;
-        if (window.confirm("有新版本可用，是否重新整理？")) {
-          window.location.reload();
-        }
+        this.openUpdateDialog(data.version);
         return;
       }
       if (showUpToDate) {
@@ -2331,6 +2361,12 @@ class ProjectIdeaUI {
   }
 
   bindEvents() {
+    this.dialogs.forEach((dialog) => {
+      dialog.addEventListener("close", () => {
+        this.syncNotifyLayer();
+      });
+    });
+
     this.projectForm.addEventListener("submit", (event) => {
       event.preventDefault();
       const name = this.projectNameInput.value.trim();
@@ -2795,6 +2831,21 @@ class ProjectIdeaUI {
       }
     });
 
+    this.updateForm?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      window.location.reload();
+    });
+
+    this.updateLater?.addEventListener("click", () => {
+      this.closeUpdateDialog();
+    });
+
+    this.updateDialog?.addEventListener("click", (event) => {
+      if (event.target === this.updateDialog) {
+        this.closeUpdateDialog();
+      }
+    });
+
     this.limitsClose?.addEventListener("click", () => {
       this.closeLimitsDialog();
     });
@@ -2968,6 +3019,7 @@ class ProjectIdeaUI {
       this.editDialog.showModal();
       this.editInput.focus();
       this.editInput.select();
+      this.syncNotifyLayer();
     } else {
       const nextText = window.prompt(title, text);
       if (nextText !== null && nextText.trim()) {
@@ -3018,6 +3070,37 @@ class ProjectIdeaUI {
     this.editInput.value = "";
     this.editDescriptionInput.value = "";
     this.editDescriptionInput.classList.add("hidden");
+    this.syncNotifyLayer();
+  }
+
+  openUpdateDialog(version) {
+    if (!this.updateDialog) return;
+    const message = version
+      ? `A new version (${version}) is available. Refresh to update.`
+      : "A new version is available. Refresh to update.";
+    if (this.updateMessage) {
+      this.updateMessage.textContent = message;
+    }
+    if (this.updateDialog.open || this.updateDialog.hasAttribute("open")) {
+      this.syncNotifyLayer();
+      return;
+    }
+    if (typeof this.updateDialog.showModal === "function") {
+      this.updateDialog.showModal();
+    } else {
+      this.updateDialog.setAttribute("open", "true");
+    }
+    this.syncNotifyLayer();
+  }
+
+  closeUpdateDialog() {
+    if (!this.updateDialog) return;
+    if (this.updateDialog.open) {
+      this.updateDialog.close();
+    } else {
+      this.updateDialog.removeAttribute("open");
+    }
+    this.syncNotifyLayer();
   }
 
   openConfirmDialog({ title, message, confirmText, onConfirm }) {
@@ -3031,6 +3114,7 @@ class ProjectIdeaUI {
     } else {
       this.confirmDialog.setAttribute("open", "true");
     }
+    this.syncNotifyLayer();
   }
 
   closeConfirmDialog() {
@@ -3043,6 +3127,7 @@ class ProjectIdeaUI {
     this.confirmTitle.textContent = "Delete";
     this.confirmMessage.textContent = "";
     this.confirmConfirm.textContent = "Delete";
+    this.syncNotifyLayer();
   }
 
   copyIdeaText(text) {
