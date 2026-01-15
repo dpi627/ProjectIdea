@@ -78,6 +78,43 @@ body {
   border: 1px solid var(--border);
   backdrop-filter: blur(14px);
   box-shadow: var(--shadow);
+  transition: padding 0.2s ease, background 0.2s ease, border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.topbar.is-sticky {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  padding: 8px 24px;
+  border-radius: 0;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  z-index: 6;
+}
+
+.topbar.is-sticky .brand {
+  gap: 10px;
+}
+
+.topbar.is-sticky .brand-mark {
+  font-size: 20px;
+}
+
+.topbar.is-sticky .brand-title {
+  font-size: 18px;
+}
+
+.topbar.is-sticky .brand-subtitle {
+  display: none;
+}
+
+.topbar-spacer {
+  height: 0;
+  transition: height 0.2s ease;
 }
 
 .brand {

@@ -1,7 +1,7 @@
 const STORAGE_KEY = "project-idea-collection.v1";
 const THEME_KEY = "project-idea-collection.theme";
 const UI_STATE_KEY = "project-idea-collection.ui";
-const APP_VERSION = "20260114180000";
+const APP_VERSION = "20260114190000";
 const DEFAULT_UPDATE_CHECK_INTERVAL_MS = 60_000;
 const MIN_UPDATE_CHECK_INTERVAL_MS = 10_000;
 const MAX_UPDATE_CHECK_INTERVAL_MS = 3_600_000;
@@ -635,6 +635,10 @@ class ProjectIdeaUI {
     this.logToggle = document.getElementById("logToggle");
     this.notifyStack = document.getElementById("notifyStack");
     this.workspace = document.querySelector(".workspace");
+    this.topbar = document.querySelector(".topbar");
+    this.topbarSpacer = document.getElementById("topbarSpacer");
+    this.topbarStickyThreshold = 0;
+    this.isTopbarSticky = false;
     this.logPanel = document.querySelector(".log-panel");
     this.logViewAll = document.getElementById("logViewAll");
     this.footerFeatures = document.getElementById("footerFeatures");
@@ -2379,6 +2383,54 @@ class ProjectIdeaUI {
     }
   }
 
+  initStickyTopbar() {
+    if (!this.topbar || !this.topbarSpacer) return;
+    let ticking = false;
+
+    const measure = () => {
+      const wasSticky = this.isTopbarSticky;
+      if (wasSticky) {
+        this.topbar.classList.remove("is-sticky");
+        this.topbarSpacer.style.height = "0px";
+      }
+      const rect = this.topbar.getBoundingClientRect();
+      this.topbarStickyThreshold = rect.bottom + window.scrollY;
+      if (wasSticky) {
+        this.topbar.classList.add("is-sticky");
+        const height = Math.round(this.topbar.getBoundingClientRect().height);
+        this.topbarSpacer.style.height = `${height}px`;
+      }
+    };
+
+    const update = () => {
+      const shouldStick = window.scrollY >= this.topbarStickyThreshold;
+      if (shouldStick === this.isTopbarSticky) return;
+      this.isTopbarSticky = shouldStick;
+      this.topbar.classList.toggle("is-sticky", shouldStick);
+      const height = shouldStick
+        ? Math.round(this.topbar.getBoundingClientRect().height)
+        : 0;
+      this.topbarSpacer.style.height = shouldStick ? `${height}px` : "0px";
+    };
+
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(() => {
+        update();
+        ticking = false;
+      });
+    };
+
+    measure();
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", () => {
+      measure();
+      update();
+    });
+  }
+
   syncFooterFeatures() {
     if (!this.footerFeatures) return;
     const track = this.footerFeatures.querySelector(".footer-features-track");
@@ -3033,6 +3085,7 @@ class ProjectIdeaUI {
       });
     });
 
+    this.initStickyTopbar();
     this.initFooterFeatures();
   }
 
