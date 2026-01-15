@@ -1,7 +1,7 @@
 const STORAGE_KEY = "project-idea-collection.v1";
 const THEME_KEY = "project-idea-collection.theme";
 const UI_STATE_KEY = "project-idea-collection.ui";
-const APP_VERSION = "20260114190000";
+const APP_VERSION = "20260114203000";
 const DEFAULT_UPDATE_CHECK_INTERVAL_MS = 60_000;
 const MIN_UPDATE_CHECK_INTERVAL_MS = 10_000;
 const MAX_UPDATE_CHECK_INTERVAL_MS = 3_600_000;
@@ -690,6 +690,7 @@ class ProjectIdeaUI {
     this.settingsThemeOptions = Array.from(
       document.querySelectorAll('input[name="themePreference"]')
     );
+    this.settingsCode = document.querySelector(".settings-code");
     this.dialogs = Array.from(document.querySelectorAll("dialog"));
 
     this.ideaForm = document.getElementById("ideaForm");
@@ -2431,6 +2432,34 @@ class ProjectIdeaUI {
     });
   }
 
+  initSettingsCodeHighlight() {
+    if (!this.settingsCode) return;
+    if (this.settingsCode.dataset.highlighted === "true") return;
+    const raw = this.settingsCode.textContent;
+    if (!raw) return;
+    const pattern =
+      /("(?:\\.|[^"\\])*")(?=\s*:)|("(?:\\.|[^"\\])*")|\b(true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g;
+    let lastIndex = 0;
+    let html = "";
+    let match;
+    while ((match = pattern.exec(raw)) !== null) {
+      html += escapeHtml(raw.slice(lastIndex, match.index));
+      if (match[1]) {
+        html += `<span class="json-key">${escapeHtml(match[1])}</span>`;
+      } else if (match[2]) {
+        html += `<span class="json-string">${escapeHtml(match[2])}</span>`;
+      } else if (match[3]) {
+        html += `<span class="json-literal">${escapeHtml(match[3])}</span>`;
+      } else {
+        html += `<span class="json-number">${escapeHtml(match[0])}</span>`;
+      }
+      lastIndex = pattern.lastIndex;
+    }
+    html += escapeHtml(raw.slice(lastIndex));
+    this.settingsCode.innerHTML = html;
+    this.settingsCode.dataset.highlighted = "true";
+  }
+
   syncFooterFeatures() {
     if (!this.footerFeatures) return;
     const track = this.footerFeatures.querySelector(".footer-features-track");
@@ -3086,6 +3115,7 @@ class ProjectIdeaUI {
     });
 
     this.initStickyTopbar();
+    this.initSettingsCodeHighlight();
     this.initFooterFeatures();
   }
 

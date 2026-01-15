@@ -16,6 +16,11 @@
   --canvas-opacity: 0.78;
   --glow-1: #fffdf7;
   --glow-2: #e8f3ee;
+  --code-key: #1f8a70;
+  --code-string: #2aa37a;
+  --code-number: #3b7e70;
+  --code-literal: #0f6f57;
+  --code-punct: rgba(13, 27, 42, 0.45);
 }
 
 [data-theme="dark"] {
@@ -34,6 +39,11 @@
   --canvas-opacity: 0.9;
   --glow-1: #121a22;
   --glow-2: #0c171f;
+  --code-key: #ffb05a;
+  --code-string: #f59b4a;
+  --code-number: #ffc678;
+  --code-literal: #f07f3a;
+  --code-punct: rgba(244, 246, 249, 0.4);
 }
 
 * {
@@ -1358,7 +1368,25 @@ button:hover {
   background: var(--surface);
   padding: 12px;
   overflow: auto;
-  color: var(--ink);
+  color: var(--code-punct);
+}
+
+.settings-code .json-key {
+  color: var(--code-key);
+  font-weight: 600;
+}
+
+.settings-code .json-string {
+  color: var(--code-string);
+}
+
+.settings-code .json-number {
+  color: var(--code-number);
+}
+
+.settings-code .json-literal {
+  color: var(--code-literal);
+  font-weight: 600;
 }
 
 .settings-field {
