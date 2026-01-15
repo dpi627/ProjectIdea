@@ -1,7 +1,7 @@
 const STORAGE_KEY = "project-idea-collection.v1";
 const THEME_KEY = "project-idea-collection.theme";
 const UI_STATE_KEY = "project-idea-collection.ui";
-const APP_VERSION = "20260114210000";
+const APP_VERSION = "20260114221000";
 const DEFAULT_UPDATE_CHECK_INTERVAL_MS = 60_000;
 const MIN_UPDATE_CHECK_INTERVAL_MS = 10_000;
 const MAX_UPDATE_CHECK_INTERVAL_MS = 3_600_000;
@@ -675,10 +675,11 @@ class ProjectIdeaUI {
     this.settingsPanels = Array.from(
       document.querySelectorAll(".settings-panel")
     );
-    this.settingsExportButton = document.getElementById("settingsExport");
-    this.settingsImportButton = document.getElementById("settingsImport");
+    this.settingsExportButton = document.getElementById("settingsExport");      
+    this.settingsImportButton = document.getElementById("settingsImport");      
     this.settingsProxyToggle = document.getElementById("settingsProxyToggle");
-    this.settingsProxyUrlInput = document.getElementById("settingsProxyUrl");
+    this.settingsIdeaToggle = document.getElementById("settingsIdeaToggle");
+    this.settingsProxyUrlInput = document.getElementById("settingsProxyUrl");   
     this.settingsUsageUrlInput = document.getElementById("settingsUsageUrl");
     this.settingsIntervalInput = document.getElementById("settingsIntervalSec");
     this.settingsProxyForm = document.getElementById("settingsProxyForm");
@@ -728,6 +729,10 @@ class ProjectIdeaUI {
     this.logFilterValue = "";
     this.logProjectFilterValue = "all";
     this.ideaFilter = this.resolveIdeaFilter(uiState.ideaFilter);
+    this.copyWithUltrathink =
+      typeof uiState.copyWithUltrathink === "boolean"
+        ? uiState.copyWithUltrathink
+        : false;
     this.logDialogEntries = [];
     this.logDialogRenderedCount = 0;
     this.logDialogBatchSize = 24;
@@ -815,6 +820,7 @@ class ProjectIdeaUI {
       activeProjectId: this.activeProjectId,
       isLogVisible: this.isLogVisible,
       ideaFilter: this.ideaFilter,
+      copyWithUltrathink: this.copyWithUltrathink,
       serviceMonitorEnabled: this.serviceMonitorEnabled,
       serviceMonitorUrl: this.serviceMonitorUrl,
       serviceMonitorIntervalMs: this.serviceMonitorIntervalMs,
@@ -995,6 +1001,7 @@ class ProjectIdeaUI {
       });
     }
     this.updateProxyToggle(this.serviceMonitorEnabled);
+    this.updateIdeaToggle(this.copyWithUltrathink);
   }
 
   openSettingsDialog(panel = "theme") {
@@ -1026,6 +1033,23 @@ class ProjectIdeaUI {
     const label = isEnabled ? "Enabled" : "Disabled";
     const textNode = this.settingsProxyToggle.querySelector(".toggle-text");
     if (textNode) textNode.textContent = label;
+  }
+
+  updateIdeaToggle(isEnabled) {
+    if (!this.settingsIdeaToggle) return;
+    this.settingsIdeaToggle.classList.toggle("is-active", isEnabled);
+    this.settingsIdeaToggle.setAttribute("aria-pressed", isEnabled);
+    const label = isEnabled ? "Enabled" : "Disabled";
+    const textNode = this.settingsIdeaToggle.querySelector(".toggle-text");
+    if (textNode) textNode.textContent = label;
+  }
+
+  setCopyWithUltrathink(isEnabled, { skipPersist = false } = {}) {
+    this.copyWithUltrathink = Boolean(isEnabled);
+    if (!skipPersist) {
+      this.persistUiState();
+    }
+    this.updateIdeaToggle(this.copyWithUltrathink);
   }
 
   setServiceMonitorUrl(url, { skipPersist = false } = {}) {
@@ -1593,6 +1617,11 @@ class ProjectIdeaUI {
     }
     if (typeof uiState.serviceMonitorEnabled === "boolean") {
       this.setServiceMonitorEnabled(uiState.serviceMonitorEnabled, {
+        skipPersist: true,
+      });
+    }
+    if (typeof uiState.copyWithUltrathink === "boolean") {
+      this.setCopyWithUltrathink(uiState.copyWithUltrathink, {
         skipPersist: true,
       });
     }
@@ -3072,6 +3101,10 @@ class ProjectIdeaUI {
       this.setServiceMonitorEnabled(!this.serviceMonitorEnabled);
     });
 
+    this.settingsIdeaToggle?.addEventListener("click", () => {
+      this.setCopyWithUltrathink(!this.copyWithUltrathink);
+    });
+
     this.settingsProxyForm?.addEventListener("submit", (event) => {
       event.preventDefault();
       if (!this.settingsProxyUrlInput) return;
@@ -3307,21 +3340,26 @@ class ProjectIdeaUI {
   }
 
   copyIdeaText(text) {
+    const prefix = this.copyWithUltrathink ? "use ultrathink, " : "";
+    const copyText = `${prefix}${text}`;
     const notify = () => {
+      const noticeText = this.copyWithUltrathink
+        ? "Copied with ultrathink"
+        : text;
       this.pushNotification({
-        title: "Idea copied",
-        message: text,
+        title: this.copyWithUltrathink ? "Copied with ultrathink" : "Idea copied",
+        message: noticeText,
         tone: "info",
       });
     };
     if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(text).then(notify).catch(() => {
-        this.copyIdeaTextFallback(text);
+      navigator.clipboard.writeText(copyText).then(notify).catch(() => {
+        this.copyIdeaTextFallback(copyText);
         notify();
       });
       return;
     }
-    this.copyIdeaTextFallback(text);
+    this.copyIdeaTextFallback(copyText);
     notify();
   }
 

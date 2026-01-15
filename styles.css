@@ -21,6 +21,9 @@
   --code-number: #3b7e70;
   --code-literal: #0f6f57;
   --code-punct: rgba(13, 27, 42, 0.45);
+  --ultra-1: #1f8a70;
+  --ultra-2: #3bbf8c;
+  --ultra-3: #e9b44c;
 }
 
 [data-theme="dark"] {
@@ -44,6 +47,9 @@
   --code-number: #ffc678;
   --code-literal: #f07f3a;
   --code-punct: rgba(244, 246, 249, 0.4);
+  --ultra-1: #ffb05a;
+  --ultra-2: #ff8a3d;
+  --ultra-3: #f0c56d;
 }
 
 * {
@@ -1342,6 +1348,28 @@ button:hover {
   margin: 4px 0 0;
   font-size: 12px;
   color: var(--muted);
+}
+
+.ultrathink-word {
+  display: inline-block;
+  font-weight: 700;
+  color: var(--accent);
+  background: linear-gradient(90deg, var(--ultra-1), var(--ultra-2), var(--ultra-3));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.inline-sample {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-weight: 600;
 }
 
 .settings-row {

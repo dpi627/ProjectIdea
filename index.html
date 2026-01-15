@@ -9,7 +9,7 @@
     type="image/svg+xml"
     href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMxZjhhNzAiLz48cG9seWdvbiBwb2ludHM9IjMyIDEwIDU0IDMyIDMyIDU0IDEwIDMyIiBmaWxsPSIjZmZmZmZmIi8+PC9zdmc+"
   />
-  <link rel="stylesheet" href="styles.css?v=20260114210000" />
+  <link rel="stylesheet" href="styles.css?v=20260114221000" />
 </head>
 <body>
   <canvas id="bgCanvas" aria-hidden="true"></canvas>
@@ -315,6 +315,7 @@
       <div class="settings-body">
         <div class="settings-menu" role="tablist" aria-label="Settings sections">
           <button class="settings-tab is-active" type="button" data-panel="data" aria-pressed="true">Data</button>
+          <button class="settings-tab" type="button" data-panel="idea" aria-pressed="false">Idea</button>
           <button class="settings-tab" type="button" data-panel="proxy" aria-pressed="false">Proxy</button>
           <button class="settings-tab" type="button" data-panel="theme" aria-pressed="false">Theme</button>
           <button class="settings-tab" type="button" data-panel="system" aria-pressed="false">System</button>
@@ -367,6 +368,7 @@
     "activeProjectId": "project-id",
     "isLogVisible": false,
     "ideaFilter": "todo",
+    "copyWithUltrathink": false,
     "serviceMonitorEnabled": false,
     "serviceMonitorUrl": "http://localhost:8080/health",
     "serviceMonitorIntervalMs": 5000,
@@ -374,6 +376,23 @@
     "modelUsageUrl": "http://localhost:8080/health"
   }
 }</pre>
+            </div>
+          </section>
+          <section class="settings-panel" data-panel="idea" aria-hidden="true">
+            <div class="settings-section">
+              <div class="settings-row">
+                <div>
+                  <h4>Copy with <span class="ultrathink-word">ultrathink</span></h4>
+                  <p class="settings-help">Prefix copied ideas with <span class="ultrathink-word">ultrathink</span>.</p>
+                </div>
+                <button id="settingsIdeaToggle" class="settings-toggle" type="button" aria-pressed="false">
+                  <span class="toggle-track">
+                    <span class="toggle-thumb"></span>
+                  </span>
+                  <span class="toggle-text">Disabled</span>
+                </button>
+              </div>
+              <p class="settings-help">Copy prefix: <span class="inline-sample">use <span class="ultrathink-word">ultrathink</span>,</span></p>
             </div>
           </section>
           <section class="settings-panel" data-panel="proxy" aria-hidden="true">
@@ -527,6 +546,6 @@
     </div>
   </dialog>
 
-  <script src="app.js?v=20260114210000"></script>
+  <script src="app.js?v=20260114221000"></script>
 </body>
 </html>
