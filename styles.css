@@ -573,18 +573,15 @@ button:hover {
   width: 100%;
   max-width: 100%;
   min-width: 0;
+  position: relative;
   transition: border-color 0.2s ease, transform 0.2s ease;
 }
 
 .project-card-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
+  display: block;
 }
 
 .project-title-block {
-  flex: 1;
   display: grid;
   gap: 4px;
   min-width: 0;
@@ -604,10 +601,14 @@ button:hover {
   background: var(--accent);
   opacity: 0;
   transform: scale(0.8);
+  flex-shrink: 0;
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .project-actions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
   display: flex;
   gap: 6px;
   opacity: 0;
