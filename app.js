@@ -164,10 +164,12 @@ class Idea {
 }
 
 class Project {
-  constructor({ id = createId(), name, description = "", ideas = [] }) {
+  constructor({ id = createId(), name, description = "", startDate = null, dueDate = null, ideas = [] }) {
     this.id = id;
     this.name = name;
     this.description = description;
+    this.startDate = startDate;
+    this.dueDate = dueDate;
     this.ideas = ideas.map((idea) => new Idea(idea));
   }
 
@@ -202,6 +204,8 @@ class LocalStorageProjectRepository {
       id: project.id,
       name: project.name,
       description: project.description,
+      startDate: project.startDate,
+      dueDate: project.dueDate,
       ideas: project.ideas.map((idea) => ({
         id: idea.id,
         text: idea.text,
@@ -281,6 +285,8 @@ class ProjectService {
       id: project.id,
       name: project.name,
       description: project.description,
+      startDate: project.startDate,
+      dueDate: project.dueDate,
       ideas: project.ideas.map((idea) => ({
         id: idea.id,
         text: idea.text,
@@ -331,6 +337,13 @@ class ProjectService {
   updateProjectDescription(projectId, description) {
     const project = this.findProject(projectId);
     project.description = description.trim();
+    this.repository.save(this.projects);
+  }
+
+  updateProjectDates(projectId, startDate, dueDate) {
+    const project = this.findProject(projectId);
+    project.startDate = startDate || null;
+    project.dueDate = dueDate || null;
     this.repository.save(this.projects);
   }
 
@@ -708,6 +721,9 @@ class ProjectIdeaUI {
     this.editTitle = document.getElementById("editTitle");
     this.editInput = document.getElementById("editInput");
     this.editDescriptionInput = document.getElementById("editDescription");
+    this.editDateFields = document.getElementById("editDateFields");
+    this.editStartDateInput = document.getElementById("editStartDate");
+    this.editDueDateInput = document.getElementById("editDueDate");
     this.editCancel = document.getElementById("editCancel");
     this.confirmDialog = document.getElementById("confirmDialog");
     this.confirmForm = document.getElementById("confirmForm");
@@ -2603,6 +2619,8 @@ class ProjectIdeaUI {
             id: project.id,
             text: project.name,
             description: project.description,
+            startDate: project.startDate,
+            dueDate: project.dueDate,
             title: "Edit project",
             maxLength: 50,
           });
@@ -2994,6 +3012,11 @@ class ProjectIdeaUI {
           this.editingProjectId,
           this.editDescriptionInput.value
         );
+        this.service.updateProjectDates(
+          this.editingProjectId,
+          this.editStartDateInput.value || null,
+          this.editDueDateInput.value || null
+        );
         this.animateProjectsOnNextRender = true;
         this.pushNotification({
           title: "Project updated",
@@ -3214,7 +3237,7 @@ class ProjectIdeaUI {
     }
   }
 
-  openEditDialog({ mode, id, text, description = "", title, maxLength }) {
+  openEditDialog({ mode, id, text, description = "", startDate = null, dueDate = null, title, maxLength }) {
     if (!id) return;
     this.editingMode = mode;
     this.editingIdeaId = mode === "idea" ? id : null;
@@ -3225,6 +3248,9 @@ class ProjectIdeaUI {
     const showDescription = mode === "project";
     this.editDescriptionInput.classList.toggle("hidden", !showDescription);
     this.editDescriptionInput.value = showDescription ? description : "";
+    this.editDateFields.classList.toggle("hidden", !showDescription);
+    this.editStartDateInput.value = startDate || "";
+    this.editDueDateInput.value = dueDate || "";
 
     if (typeof this.editDialog.showModal === "function") {
       this.editDialog.showModal();
@@ -3281,6 +3307,9 @@ class ProjectIdeaUI {
     this.editInput.value = "";
     this.editDescriptionInput.value = "";
     this.editDescriptionInput.classList.add("hidden");
+    this.editDateFields.classList.add("hidden");
+    this.editStartDateInput.value = "";
+    this.editDueDateInput.value = "";
     this.syncNotifyLayer();
   }
 

@@ -1098,6 +1098,44 @@ button:hover {
   max-width: 90vw;
 }
 
+.edit-date-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.edit-date-fields.hidden {
+  display: none;
+}
+
+.edit-date-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.edit-date-label span {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.edit-date-label input[type="date"] {
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--ink);
+  transition: border-color 0.15s ease;
+}
+
+.edit-date-label input[type="date"]:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 .dialog-card h3 {
   margin: 0;
   font-family: "Fraunces", "Times New Roman", serif;
