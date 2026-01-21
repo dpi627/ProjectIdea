@@ -909,10 +909,8 @@ button:hover {
 }
 
 .idea-item {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 10px;
+  display: block;
+  position: relative;
   padding: 14px 16px;
   border-radius: 16px;
   border: 1px solid var(--border);
@@ -959,20 +957,30 @@ button:hover {
 }
 
 .idea-actions {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%) translateX(2px);
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+  padding: 6px 8px;
+  border-radius: 12px;
+  background: var(--surface-2);
   opacity: 0;
   pointer-events: none;
-  transform: translateY(-2px);
   transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.idea-actions .icon-button {
+  background: var(--surface);
 }
 
 .idea-item:hover .idea-actions,
 .idea-item:focus-within .idea-actions {
   opacity: 1;
   pointer-events: auto;
-  transform: translateY(0);
+  transform: translateY(-50%) translateX(0);
 }
 
 .icon-button {
