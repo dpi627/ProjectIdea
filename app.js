@@ -174,6 +174,16 @@ const ICONS = {
       <path d="M8 16H3v5" />
     </svg>
   `,
+  gantt: `
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M10 6h8" />
+      <path d="M3 6h3" />
+      <path d="M6 12h10" />
+      <path d="M3 12h1" />
+      <path d="M12 18h6" />
+      <path d="M3 18h5" />
+    </svg>
+  `,
 };
 
 // Domain layer
@@ -734,6 +744,12 @@ class ProjectIdeaUI {
       document.querySelectorAll('input[name="themePreference"]')
     );
     this.settingsCode = document.querySelector(".settings-code");
+    this.ganttToggle = document.getElementById("ganttToggle");
+    this.ganttDialog = document.getElementById("ganttDialog");
+    this.ganttTimeline = document.getElementById("ganttTimeline");
+    this.ganttProjects = document.getElementById("ganttProjects");
+    this.ganttRange = document.getElementById("ganttRange");
+    this.ganttClose = document.getElementById("ganttClose");
     this.dialogs = Array.from(document.querySelectorAll("dialog"));
 
     this.ideaForm = document.getElementById("ideaForm");
@@ -1047,6 +1063,87 @@ class ProjectIdeaUI {
     }
     this.updateProxyToggle(this.serviceMonitorEnabled);
     this.updateIdeaToggle(this.copyWithUltrathink);
+  }
+
+  openGanttDialog() {
+    if (!this.ganttDialog) return;
+    this.renderGanttChart();
+    if (typeof this.ganttDialog.showModal === "function") {
+      this.ganttDialog.showModal();
+    } else {
+      this.ganttDialog.setAttribute("open", "true");
+    }
+    this.syncNotifyLayer();
+  }
+
+  renderGanttChart() {
+    const months = parseInt(this.ganttRange?.value || "12", 10);
+    const { start, end, monthLabels } = this.calculateGanttTimeRange(months);
+    const now = new Date();
+    const currentYM = `${now.getFullYear()}/${now.getMonth() + 1}`;
+
+    // 渲染月份時間軸
+    this.ganttTimeline.innerHTML = monthLabels
+      .map(label => `<div class="gantt-month${label === currentYM ? ' is-current' : ''}">${escapeHtml(label)}</div>`)
+      .join("");
+
+    // 篩選有日期的專案並排序（起始時間近的在上）
+    const projectsWithDates = this.service.getProjects()
+      .filter(p => p.startDate && p.dueDate)
+      .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+
+    if (projectsWithDates.length === 0) {
+      this.ganttProjects.innerHTML = `<div class="gantt-empty">No projects with start/end dates.</div>`;
+      return;
+    }
+
+    // 渲染專案條形圖
+    this.ganttProjects.innerHTML = projectsWithDates
+      .map(project => this.renderGanttProject(project, start, end))
+      .join("");
+  }
+
+  calculateGanttTimeRange(months) {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + months);
+
+    const monthLabels = [];
+    const current = new Date(start);
+    while (current < end) {
+      monthLabels.push(`${current.getFullYear()}/${current.getMonth() + 1}`);
+      current.setMonth(current.getMonth() + 1);
+    }
+
+    return { start, end, monthLabels };
+  }
+
+  renderGanttProject(project, rangeStart, rangeEnd) {
+    const stats = project.stats();
+    const projectStart = new Date(project.startDate);
+    const projectEnd = new Date(project.dueDate);
+
+    // 計算位置百分比
+    const totalRange = rangeEnd - rangeStart;
+    const leftPercent = Math.max(0, (projectStart - rangeStart) / totalRange * 100);
+    const rightPercent = Math.min(100, (projectEnd - rangeStart) / totalRange * 100);
+    const widthPercent = Math.max(0, rightPercent - leftPercent);
+
+    return `
+      <div class="gantt-project" data-project-id="${project.id}">
+        <div class="gantt-project-label" style="left: ${leftPercent}%;">
+          <span>${escapeHtml(project.name)}</span>
+        </div>
+        <div class="gantt-project-stats" style="left: ${leftPercent + widthPercent}%;">
+          <span>${stats.done}/${stats.total}</span>
+          <span>${stats.percent}%</span>
+        </div>
+        <div class="gantt-bar" style="left: ${leftPercent}%; width: ${widthPercent}%;">
+          <div class="gantt-bar-progress" style="--progress: ${stats.percent}%;"></div>
+        </div>
+      </div>
+    `;
   }
 
   openSettingsDialog(panel = "theme") {
@@ -2863,6 +2960,22 @@ class ProjectIdeaUI {
       }
     });
 
+    this.ganttToggle?.addEventListener("click", () => {
+      this.openGanttDialog();
+    });
+
+    this.ganttClose?.addEventListener("click", () => {
+      this.ganttDialog.close();
+    });
+
+    this.ganttRange?.addEventListener("change", () => {
+      this.renderGanttChart();
+    });
+
+    this.ganttDialog?.addEventListener("click", (e) => {
+      if (e.target === this.ganttDialog) this.ganttDialog.close();
+    });
+
     this.settingsToggle?.addEventListener("click", () => {
       this.openSettingsDialog("data");
     });
@@ -3223,6 +3336,12 @@ class ProjectIdeaUI {
       this.importButton.innerHTML = `${ICONS.upload}<span class="sr-only">Import data</span>`;
       this.importButton.setAttribute("aria-label", "Import data");
       this.importButton.title = "Import data";
+    }
+
+    if (this.ganttToggle) {
+      this.ganttToggle.innerHTML = `${ICONS.gantt}<span class="sr-only">Project Timeline</span>`;
+      this.ganttToggle.setAttribute("aria-label", "Project Timeline");
+      this.ganttToggle.title = "Project Timeline";
     }
 
     if (this.settingsToggle) {

@@ -25,6 +25,7 @@
       </div>
       <div class="topbar-actions">
         <button id="themeToggle" class="ghost theme-toggle" type="button" aria-label="Dark mode"></button>
+        <button id="ganttToggle" class="ghost topbar-icon" type="button" aria-label="Project Timeline"></button>
         <button id="settingsToggle" class="ghost topbar-icon" type="button" aria-label="Settings"></button>
         <button id="logToggle" class="ghost log-toggle" type="button" aria-label="Hide log"></button>
       </div>
@@ -303,6 +304,28 @@
           <p>Loading model usage...</p>
         </div>
         <div id="limitsList" class="limits-grid"></div>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="ganttDialog" class="dialog gantt-dialog">
+    <div class="dialog-card gantt-card">
+      <div class="gantt-header">
+        <div>
+          <p class="eyebrow">Timeline</p>
+          <h3>Project Timeline</h3>
+        </div>
+        <div class="gantt-controls">
+          <select id="ganttRange" aria-label="Display range">
+            <option value="6">6 個月</option>
+            <option value="12" selected>1 年</option>
+          </select>
+          <button id="ganttClose" class="ghost" type="button">Close</button>
+        </div>
+      </div>
+      <div class="gantt-body">
+        <div class="gantt-timeline" id="ganttTimeline"></div>
+        <div class="gantt-projects" id="ganttProjects"></div>
       </div>
     </div>
   </dialog>

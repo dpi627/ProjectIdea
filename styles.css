@@ -1344,6 +1344,141 @@ button:hover {
   font-family: "JetBrains Mono", "SFMono-Regular", "Consolas", monospace;
 }
 
+/* === Gantt Dialog === */
+.gantt-card {
+  width: 95vw;
+  max-height: 80vh;
+  display: grid;
+  gap: 16px;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.gantt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.gantt-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.gantt-controls select {
+  padding: 6px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.gantt-body {
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  gap: 8px;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+/* 月份時間軸 */
+.gantt-timeline {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 1;
+}
+
+.gantt-month {
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  font-family: "JetBrains Mono", monospace;
+}
+
+.gantt-month.is-current {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* 專案列表 */
+.gantt-projects {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.gantt-project {
+  position: relative;
+  min-height: 32px;
+}
+
+.gantt-project-label {
+  position: absolute;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* 專案進度資訊 - 位於進度條右側上方 */
+.gantt-project-stats {
+  position: absolute;
+  top: 0;
+  display: none;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  font-family: "JetBrains Mono", monospace;
+  white-space: nowrap;
+  transform: translateX(-100%);
+}
+
+.gantt-project:hover .gantt-project-stats {
+  display: flex;
+}
+
+/* 專案條形圖 - 與主畫面進度條一致 */
+.gantt-bar {
+  position: absolute;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(13, 27, 42, 0.08);
+  overflow: hidden;
+  top: 20px;
+}
+
+[data-theme="dark"] .gantt-bar {
+  background: rgba(244, 246, 249, 0.12);
+}
+
+.gantt-bar-progress {
+  height: 100%;
+  width: var(--progress, 0%);
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  border-radius: 999px;
+}
+
+/* 空狀態 */
+.gantt-empty {
+  display: grid;
+  place-items: center;
+  padding: 3rem;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .settings-card {
   width: min(900px, 94vw);
   height: 80vh;
