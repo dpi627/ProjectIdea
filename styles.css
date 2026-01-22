@@ -1977,3 +1977,110 @@ button:hover {
     transform: none;
   }
 }
+
+/* === Project Category Styles === */
+
+/* Edit dialog category field */
+.edit-category-field {
+  margin-top: 8px;
+}
+
+.edit-category-field.hidden {
+  display: none;
+}
+
+.edit-category-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.edit-category-label span {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.edit-category-label select {
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--ink);
+  transition: border-color 0.15s ease;
+}
+
+.edit-category-label select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Project card category badge */
+.project-category {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  z-index: 1;
+  transition: opacity 0.2s ease;
+}
+
+.project-category-ci {
+  background: rgba(31, 138, 112, 0.15);
+  color: var(--accent);
+}
+
+.project-category-mp {
+  background: rgba(233, 180, 76, 0.2);
+  color: #c59a35;
+}
+
+[data-theme="dark"] .project-category-mp {
+  color: var(--accent-2);
+}
+
+.project-category-sp {
+  background: rgba(91, 100, 115, 0.15);
+  color: var(--muted);
+}
+
+/* Fade out on hover to reveal action buttons */
+.project-card:hover .project-category,
+.project-card:focus-within .project-category {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Gantt timeline category tag */
+.gantt-category {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 4px;
+  margin-right: 6px;
+}
+
+.gantt-category-ci {
+  background: rgba(31, 138, 112, 0.15);
+  color: var(--accent);
+}
+
+.gantt-category-mp {
+  background: rgba(233, 180, 76, 0.2);
+  color: #c59a35;
+}
+
+[data-theme="dark"] .gantt-category-mp {
+  color: var(--accent-2);
+}
+
+.gantt-category-sp {
+  background: rgba(91, 100, 115, 0.15);
+  color: var(--muted);
+}

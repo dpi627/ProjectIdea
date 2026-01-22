@@ -227,6 +227,17 @@
           <input id="editDueDate" type="date" />
         </label>
       </div>
+      <div id="editCategoryField" class="edit-category-field hidden">
+        <label class="edit-category-label">
+          <span>Category</span>
+          <select id="editCategory">
+            <option value="">None</option>
+            <option value="CI">CI - 年度專案 - Continue Improvement Project</option>
+            <option value="MP">MP - 重點專案 - Main Project (非CI之重點專案)</option>
+            <option value="SP">SP - 其他專案 - Side Project (非上述類型專案)</option>
+          </select>
+        </label>
+      </div>
       <div class="dialog-actions">
         <button id="editCancel" class="ghost" type="button">Cancel</button>
         <button class="primary" type="submit">Save</button>
@@ -316,9 +327,14 @@
           <h3>Project Timeline</h3>
         </div>
         <div class="gantt-controls">
-          <select id="ganttRange" aria-label="Display range">
-            <option value="6">6 個月</option>
-            <option value="12" selected>1 年</option>
+          <select id="ganttCategoryFilter" aria-label="Filter by category">
+            <option value="ALL">ALL</option>
+            <option value="CI">CI</option>
+            <option value="MP">MP</option>
+            <option value="SP">SP</option>
+          </select>
+          <select id="ganttRange" aria-label="Display year">
+            <!-- Options generated dynamically -->
           </select>
           <button id="ganttClose" class="ghost" type="button">Close</button>
         </div>

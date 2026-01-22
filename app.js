@@ -204,12 +204,13 @@ class Idea {
 }
 
 class Project {
-  constructor({ id = createId(), name, description = "", startDate = null, dueDate = null, ideas = [] }) {
+  constructor({ id = createId(), name, description = "", startDate = null, dueDate = null, category = null, ideas = [] }) {
     this.id = id;
     this.name = name;
     this.description = description;
     this.startDate = startDate;
     this.dueDate = dueDate;
+    this.category = category; // null | "CI" | "MP" | "SP"
     this.ideas = ideas.map((idea) => new Idea(idea));
   }
 
@@ -246,6 +247,7 @@ class LocalStorageProjectRepository {
       description: project.description,
       startDate: project.startDate,
       dueDate: project.dueDate,
+      category: project.category,
       ideas: project.ideas.map((idea) => ({
         id: idea.id,
         text: idea.text,
@@ -327,6 +329,7 @@ class ProjectService {
       description: project.description,
       startDate: project.startDate,
       dueDate: project.dueDate,
+      category: project.category,
       ideas: project.ideas.map((idea) => ({
         id: idea.id,
         text: idea.text,
@@ -356,10 +359,15 @@ class ProjectService {
               finishedAt: idea.finishedAt || null,
             }))
         : [];
+      const validCategories = [null, "CI", "MP", "SP"];
+      const category = validCategories.includes(project.category) ? project.category : null;
       return new Project({
         id: project.id,
         name: project.name,
         description: project.description || "",
+        startDate: project.startDate || null,
+        dueDate: project.dueDate || null,
+        category,
         ideas,
       });
     });
@@ -384,6 +392,16 @@ class ProjectService {
     const project = this.findProject(projectId);
     project.startDate = startDate || null;
     project.dueDate = dueDate || null;
+    this.repository.save(this.projects);
+  }
+
+  updateProjectCategory(projectId, category) {
+    const project = this.findProject(projectId);
+    const validCategories = [null, "CI", "MP", "SP"];
+    if (!validCategories.includes(category)) {
+      throw new Error(`Invalid category: ${category}`);
+    }
+    project.category = category;
     this.repository.save(this.projects);
   }
 
@@ -749,6 +767,7 @@ class ProjectIdeaUI {
     this.ganttTimeline = document.getElementById("ganttTimeline");
     this.ganttProjects = document.getElementById("ganttProjects");
     this.ganttRange = document.getElementById("ganttRange");
+    this.ganttCategoryFilter = document.getElementById("ganttCategoryFilter");
     this.ganttClose = document.getElementById("ganttClose");
     this.dialogs = Array.from(document.querySelectorAll("dialog"));
 
@@ -769,6 +788,8 @@ class ProjectIdeaUI {
     this.editDateFields = document.getElementById("editDateFields");
     this.editStartDateInput = document.getElementById("editStartDate");
     this.editDueDateInput = document.getElementById("editDueDate");
+    this.editCategoryField = document.getElementById("editCategoryField");
+    this.editCategoryInput = document.getElementById("editCategory");
     this.editCancel = document.getElementById("editCancel");
     this.confirmDialog = document.getElementById("confirmDialog");
     this.confirmForm = document.getElementById("confirmForm");
@@ -1067,6 +1088,7 @@ class ProjectIdeaUI {
 
   openGanttDialog() {
     if (!this.ganttDialog) return;
+    this.initGanttYearOptions();
     this.renderGanttChart();
     if (typeof this.ganttDialog.showModal === "function") {
       this.ganttDialog.showModal();
@@ -1076,9 +1098,30 @@ class ProjectIdeaUI {
     this.syncNotifyLayer();
   }
 
+  initGanttYearOptions() {
+    if (!this.ganttRange) return;
+    const currentYear = new Date().getFullYear();
+    const startYear = 2025;
+    const endYear = currentYear + 1;
+
+    // 只在選項尚未設定時初始化
+    if (this.ganttRange.options.length === 0) {
+      for (let year = startYear; year <= endYear; year++) {
+        const option = document.createElement("option");
+        option.value = year;
+        option.textContent = year;
+        if (year === currentYear) {
+          option.selected = true;
+        }
+        this.ganttRange.appendChild(option);
+      }
+    }
+  }
+
   renderGanttChart() {
-    const months = parseInt(this.ganttRange?.value || "12", 10);
-    const { start, end, monthLabels } = this.calculateGanttTimeRange(months);
+    const selectedYear = parseInt(this.ganttRange?.value || new Date().getFullYear(), 10);
+    const categoryFilter = this.ganttCategoryFilter?.value || "ALL";
+    const { start, end, monthLabels } = this.calculateGanttTimeRange(selectedYear);
     const now = new Date();
     const currentYM = `${now.getFullYear()}/${now.getMonth() + 1}`;
 
@@ -1088,12 +1131,29 @@ class ProjectIdeaUI {
       .join("");
 
     // 篩選有日期的專案並排序（起始時間近的在上）
-    const projectsWithDates = this.service.getProjects()
-      .filter(p => p.startDate && p.dueDate)
-      .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+    let projectsWithDates = this.service.getProjects()
+      .filter(p => p.startDate && p.dueDate);
+
+    // 套用分類過濾
+    if (categoryFilter !== "ALL") {
+      projectsWithDates = projectsWithDates.filter(p => p.category === categoryFilter);
+    }
+
+    // 套用年度過濾 - 專案起迄日期必須與選擇年度有交集
+    projectsWithDates = projectsWithDates.filter(p => {
+      const projectStart = new Date(p.startDate);
+      const projectEnd = new Date(p.dueDate);
+      // 專案結束日期 >= 年度開始 且 專案開始日期 < 年度結束
+      return projectEnd >= start && projectStart < end;
+    });
+
+    projectsWithDates.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
 
     if (projectsWithDates.length === 0) {
-      this.ganttProjects.innerHTML = `<div class="gantt-empty">No projects with start/end dates.</div>`;
+      const message = categoryFilter !== "ALL"
+        ? `No ${categoryFilter} projects in ${selectedYear}`
+        : `No projects in ${selectedYear}`;
+      this.ganttProjects.innerHTML = `<div class="gantt-empty">${escapeHtml(message)}</div>`;
       return;
     }
 
@@ -1103,11 +1163,9 @@ class ProjectIdeaUI {
       .join("");
   }
 
-  calculateGanttTimeRange(months) {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const end = new Date(start);
-    end.setMonth(end.getMonth() + months);
+  calculateGanttTimeRange(year) {
+    const start = new Date(year, 0, 1); // 1月1日
+    const end = new Date(year, 12, 1); // 隔年1月1日（即12個月）
 
     const monthLabels = [];
     const current = new Date(start);
@@ -1130,9 +1188,14 @@ class ProjectIdeaUI {
     const rightPercent = Math.min(100, (projectEnd - rangeStart) / totalRange * 100);
     const widthPercent = Math.max(0, rightPercent - leftPercent);
 
+    const categoryTag = project.category
+      ? `<span class="gantt-category gantt-category-${project.category.toLowerCase()}">${escapeHtml(project.category)}</span>`
+      : "";
+
     return `
       <div class="gantt-project" data-project-id="${project.id}">
         <div class="gantt-project-label" style="left: ${leftPercent}%;">
+          ${categoryTag}
           <span>${escapeHtml(project.name)}</span>
         </div>
         <div class="gantt-project-stats" style="left: ${leftPercent + widthPercent}%;">
@@ -2747,6 +2810,7 @@ class ProjectIdeaUI {
             description: project.description,
             startDate: project.startDate,
             dueDate: project.dueDate,
+            category: project.category,
             title: "Edit project",
             maxLength: 50,
           });
@@ -2972,6 +3036,10 @@ class ProjectIdeaUI {
       this.renderGanttChart();
     });
 
+    this.ganttCategoryFilter?.addEventListener("change", () => {
+      this.renderGanttChart();
+    });
+
     this.ganttDialog?.addEventListener("click", (e) => {
       if (e.target === this.ganttDialog) this.ganttDialog.close();
     });
@@ -3159,6 +3227,8 @@ class ProjectIdeaUI {
           this.editStartDateInput.value || null,
           this.editDueDateInput.value || null
         );
+        const categoryValue = this.editCategoryInput.value || null;
+        this.service.updateProjectCategory(this.editingProjectId, categoryValue);
         this.animateProjectsOnNextRender = true;
         this.pushNotification({
           title: "Project updated",
@@ -3385,7 +3455,7 @@ class ProjectIdeaUI {
     }
   }
 
-  openEditDialog({ mode, id, text, description = "", startDate = null, dueDate = null, title, maxLength }) {
+  openEditDialog({ mode, id, text, description = "", startDate = null, dueDate = null, category = null, title, maxLength }) {
     if (!id) return;
     this.editingMode = mode;
     this.editingIdeaId = mode === "idea" ? id : null;
@@ -3399,6 +3469,8 @@ class ProjectIdeaUI {
     this.editDateFields.classList.toggle("hidden", !showDescription);
     this.editStartDateInput.value = startDate || "";
     this.editDueDateInput.value = dueDate || "";
+    this.editCategoryField.classList.toggle("hidden", !showDescription);
+    this.editCategoryInput.value = showDescription ? (category || "") : "";
 
     if (typeof this.editDialog.showModal === "function") {
       this.editDialog.showModal();
@@ -3458,6 +3530,8 @@ class ProjectIdeaUI {
     this.editDateFields.classList.add("hidden");
     this.editStartDateInput.value = "";
     this.editDueDateInput.value = "";
+    this.editCategoryField.classList.add("hidden");
+    this.editCategoryInput.value = "";
     this.syncNotifyLayer();
   }
 
@@ -3625,6 +3699,9 @@ class ProjectIdeaUI {
       const liveIndicator = hasOpenIdeas
         ? '<span class="project-live" aria-hidden="true"></span>'
         : "";
+      const categoryMarkup = project.category
+        ? `<span class="project-category project-category-${project.category.toLowerCase()}">${escapeHtml(project.category)}</span>`
+        : "";
       const card = document.createElement("div");
       card.className = shouldAnimate ? "project-card fade-in" : "project-card";
       if (shouldAnimate) {
@@ -3637,6 +3714,7 @@ class ProjectIdeaUI {
       card.dataset.id = project.id;
       card.innerHTML = `
         <div class="project-card-header">
+          ${categoryMarkup}
           <div class="project-title-block">
             <div class="project-title-row">
               <h3>${escapeHtml(project.name)}</h3>
