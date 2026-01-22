@@ -1229,7 +1229,12 @@ class ProjectIdeaUI {
             ${categoryTag}
             <span class="gantt-project-name">${escapeHtml(project.name)}</span>
           </div>
-          <span class="gantt-project-stats">${stats.done}/${stats.total} · ${stats.percent}%</span>
+          <div class="gantt-project-actions">
+            <span class="gantt-project-stats">${stats.done}/${stats.total} · ${stats.percent}%</span>
+            <button class="gantt-edit-btn" type="button" data-action="edit-project" aria-label="Edit project" title="Edit project">
+              ${ICONS.edit}
+            </button>
+          </div>
         </div>
         <div class="gantt-bar" style="left: ${leftPercent}%; width: ${widthPercent}%;">
           <div class="gantt-bar-progress" style="--progress: ${stats.percent}%;"></div>
@@ -3083,6 +3088,29 @@ class ProjectIdeaUI {
       if (e.target === this.ganttDialog) this.ganttDialog.close();
     });
 
+    this.ganttProjects?.addEventListener("click", (e) => {
+      const actionButton = e.target.closest("button[data-action]");
+      if (actionButton && actionButton.dataset.action === "edit-project") {
+        const projectRow = actionButton.closest(".gantt-project");
+        if (!projectRow) return;
+        const projectId = projectRow.dataset.projectId;
+        const project = this.service.findProject(projectId);
+        if (!project) return;
+
+        this.openEditDialog({
+          mode: "project",
+          id: project.id,
+          text: project.name,
+          description: project.description,
+          startDate: project.startDate,
+          dueDate: project.dueDate,
+          category: project.category,
+          title: "Edit project",
+          maxLength: 50,
+        });
+      }
+    });
+
     this.settingsToggle?.addEventListener("click", () => {
       this.openSettingsDialog("data");
     });
@@ -3278,6 +3306,12 @@ class ProjectIdeaUI {
 
       this.closeEditDialog();
       this.render();
+
+      // Re-render gantt if it's open
+      if (this.ganttDialog?.open) {
+        this.updateGanttCategoryTabs();
+        this.renderGanttChart();
+      }
     });
 
     this.editCancel.addEventListener("click", () => {
