@@ -207,6 +207,21 @@ body {
   gap: 18px;
 }
 
+.panel-header-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.project-add-form {
+  width: 100%;
+}
+
+.project-add-form input[type="text"] {
+  flex: 1;
+  min-width: 0;
+}
+
 .log-filter input,
 .log-filter select {
   padding: 8px 12px;
@@ -1364,6 +1379,42 @@ button:hover {
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.gantt-category-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.gantt-tab-button {
+  border-radius: 999px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: none;
+}
+
+.gantt-tab-button .tab-count {
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.gantt-tab-button.is-active {
+  background: rgba(31, 138, 112, 0.12);
+  border-color: rgba(31, 138, 112, 0.4);
+  color: var(--accent);
+}
+
+.gantt-tab-button.is-active .tab-count {
+  color: var(--accent);
 }
 
 .gantt-controls select {
@@ -1421,9 +1472,16 @@ button:hover {
   min-height: 32px;
 }
 
-.gantt-project-label {
+.gantt-project-header {
   position: absolute;
   top: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.gantt-project-label {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1432,21 +1490,22 @@ button:hover {
   white-space: nowrap;
 }
 
-/* 專案進度資訊 - 位於進度條右側上方 */
+.gantt-project-name {
+  color: var(--ink);
+}
+
 .gantt-project-stats {
-  position: absolute;
-  top: 0;
   display: none;
-  gap: 8px;
   font-size: 11px;
+  font-weight: 400;
   color: var(--muted);
   font-family: "JetBrains Mono", monospace;
   white-space: nowrap;
-  transform: translateX(-100%);
+  flex-shrink: 0;
 }
 
 .gantt-project:hover .gantt-project-stats {
-  display: flex;
+  display: inline;
 }
 
 /* 專案條形圖 - 與主畫面進度條一致 */

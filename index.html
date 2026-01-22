@@ -10,7 +10,7 @@
     href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMxZjhhNzAiLz48cG9seWdvbiBwb2ludHM9IjMyIDEwIDU0IDMyIDMyIDU0IDEwIDMyIiBmaWxsPSIjZmZmZmZmIi8+PC9zdmc+"
   />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-  <link rel="stylesheet" href="styles.css?v=20260122120000" />
+  <link rel="stylesheet" href="styles.css?v=20260122140000" />
 </head>
 <body>
   <canvas id="bgCanvas" aria-hidden="true"></canvas>
@@ -38,14 +38,16 @@
       <!-- section project panel -->
       <aside class="panel projects-panel">
         <div class="panel-header">
-          <div>
-            <p class="eyebrow">Your space</p>
-            <h2>Projects</h2>
+          <div class="panel-header-row">
+            <div>
+              <p class="eyebrow">Your space</p>
+              <h2>Projects</h2>
+            </div>
+            <form id="projectForm" class="inline-form project-add-form" autocomplete="off">
+              <input id="projectName" type="text" placeholder="New project name" maxlength="50" required />
+              <button type="submit" class="primary">Add</button>
+            </form>
           </div>
-          <form id="projectForm" class="inline-form" autocomplete="off">
-            <input id="projectName" type="text" placeholder="New project name" maxlength="50" required />
-            <button type="submit" class="primary">Add</button>
-          </form>
         </div>
         <!-- section project list -->
         <div id="projectsList" class="project-list"></div>
@@ -327,12 +329,24 @@
           <h3>Project Timeline</h3>
         </div>
         <div class="gantt-controls">
-          <select id="ganttCategoryFilter" aria-label="Filter by category">
-            <option value="ALL">ALL</option>
-            <option value="CI">CI</option>
-            <option value="MP">MP</option>
-            <option value="SP">SP</option>
-          </select>
+          <div id="ganttCategoryTabs" class="gantt-category-tabs" role="tablist" aria-label="Category filters">
+            <button class="gantt-tab-button is-active" type="button" data-category="ALL" aria-pressed="true">
+              <span class="tab-label">ALL</span>
+              <span class="tab-count">0</span>
+            </button>
+            <button class="gantt-tab-button" type="button" data-category="CI" aria-pressed="false">
+              <span class="tab-label">CI</span>
+              <span class="tab-count">0</span>
+            </button>
+            <button class="gantt-tab-button" type="button" data-category="MP" aria-pressed="false">
+              <span class="tab-label">MP</span>
+              <span class="tab-count">0</span>
+            </button>
+            <button class="gantt-tab-button" type="button" data-category="SP" aria-pressed="false">
+              <span class="tab-label">SP</span>
+              <span class="tab-count">0</span>
+            </button>
+          </div>
           <select id="ganttRange" aria-label="Display year">
             <!-- Options generated dynamically -->
           </select>

@@ -767,7 +767,8 @@ class ProjectIdeaUI {
     this.ganttTimeline = document.getElementById("ganttTimeline");
     this.ganttProjects = document.getElementById("ganttProjects");
     this.ganttRange = document.getElementById("ganttRange");
-    this.ganttCategoryFilter = document.getElementById("ganttCategoryFilter");
+    this.ganttCategoryTabs = document.getElementById("ganttCategoryTabs");
+    this.ganttCategoryFilter = "ALL";
     this.ganttClose = document.getElementById("ganttClose");
     this.dialogs = Array.from(document.querySelectorAll("dialog"));
 
@@ -1089,6 +1090,7 @@ class ProjectIdeaUI {
   openGanttDialog() {
     if (!this.ganttDialog) return;
     this.initGanttYearOptions();
+    this.updateGanttCategoryTabs();
     this.renderGanttChart();
     if (typeof this.ganttDialog.showModal === "function") {
       this.ganttDialog.showModal();
@@ -1096,6 +1098,34 @@ class ProjectIdeaUI {
       this.ganttDialog.setAttribute("open", "true");
     }
     this.syncNotifyLayer();
+  }
+
+  updateGanttCategoryTabs() {
+    if (!this.ganttCategoryTabs) return;
+    const selectedYear = parseInt(this.ganttRange?.value || new Date().getFullYear(), 10);
+    const { start, end } = this.calculateGanttTimeRange(selectedYear);
+
+    // 計算每個分類的專案數量
+    const allProjects = this.service.getProjects()
+      .filter(p => p.startDate && p.dueDate)
+      .filter(p => {
+        const projectStart = new Date(p.startDate);
+        const projectEnd = new Date(p.dueDate);
+        return projectEnd >= start && projectStart < end;
+      });
+
+    const counts = {
+      ALL: allProjects.length,
+      CI: allProjects.filter(p => p.category === "CI").length,
+      MP: allProjects.filter(p => p.category === "MP").length,
+      SP: allProjects.filter(p => p.category === "SP").length
+    };
+
+    this.ganttCategoryTabs.querySelectorAll(".gantt-tab-button").forEach(btn => {
+      const category = btn.dataset.category;
+      const countEl = btn.querySelector(".tab-count");
+      if (countEl) countEl.textContent = counts[category] || 0;
+    });
   }
 
   initGanttYearOptions() {
@@ -1120,7 +1150,7 @@ class ProjectIdeaUI {
 
   renderGanttChart() {
     const selectedYear = parseInt(this.ganttRange?.value || new Date().getFullYear(), 10);
-    const categoryFilter = this.ganttCategoryFilter?.value || "ALL";
+    const categoryFilter = this.ganttCategoryFilter || "ALL";
     const { start, end, monthLabels } = this.calculateGanttTimeRange(selectedYear);
     const now = new Date();
     const currentYM = `${now.getFullYear()}/${now.getMonth() + 1}`;
@@ -1194,13 +1224,12 @@ class ProjectIdeaUI {
 
     return `
       <div class="gantt-project" data-project-id="${project.id}">
-        <div class="gantt-project-label" style="left: ${leftPercent}%;">
-          ${categoryTag}
-          <span>${escapeHtml(project.name)}</span>
-        </div>
-        <div class="gantt-project-stats" style="left: ${leftPercent + widthPercent}%;">
-          <span>${stats.done}/${stats.total}</span>
-          <span>${stats.percent}%</span>
+        <div class="gantt-project-header" style="left: ${leftPercent}%; min-width: ${widthPercent}%;">
+          <div class="gantt-project-label">
+            ${categoryTag}
+            <span class="gantt-project-name">${escapeHtml(project.name)}</span>
+          </div>
+          <span class="gantt-project-stats">${stats.done}/${stats.total} · ${stats.percent}%</span>
         </div>
         <div class="gantt-bar" style="left: ${leftPercent}%; width: ${widthPercent}%;">
           <div class="gantt-bar-progress" style="--progress: ${stats.percent}%;"></div>
@@ -3033,10 +3062,20 @@ class ProjectIdeaUI {
     });
 
     this.ganttRange?.addEventListener("change", () => {
+      this.updateGanttCategoryTabs();
       this.renderGanttChart();
     });
 
-    this.ganttCategoryFilter?.addEventListener("change", () => {
+    this.ganttCategoryTabs?.addEventListener("click", (e) => {
+      const btn = e.target.closest(".gantt-tab-button");
+      if (!btn) return;
+      const category = btn.dataset.category;
+      this.ganttCategoryFilter = category;
+      this.ganttCategoryTabs.querySelectorAll(".gantt-tab-button").forEach(b => {
+        const isActive = b.dataset.category === category;
+        b.classList.toggle("is-active", isActive);
+        b.setAttribute("aria-pressed", isActive);
+      });
       this.renderGanttChart();
     });
 
