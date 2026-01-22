@@ -144,6 +144,36 @@ const ICONS = {
       <circle cx="12" cy="12" r="3" />
     </svg>
   `,
+  clock: `
+    <svg class="meta-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  `,
+  checkCircleMini: `
+    <svg class="meta-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  `,
+  calendarClock: `
+    <svg class="meta-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5" />
+      <path d="M16 2v4" />
+      <path d="M8 2v4" />
+      <path d="M3 10h5" />
+      <circle cx="16" cy="16" r="6" />
+      <path d="M16 14v2l1 1" />
+    </svg>
+  `,
+  refreshCw: `
+    <svg class="meta-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+      <path d="M21 3v5h-5" />
+      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+      <path d="M8 16H3v5" />
+    </svg>
+  `,
 };
 
 // Domain layer
@@ -636,7 +666,6 @@ class ProjectIdeaUI {
     this.projectsList = document.getElementById("projectsList");
     this.projectForm = document.getElementById("projectForm");
     this.projectNameInput = document.getElementById("projectName");
-    this.projectDescriptionInput = document.getElementById("projectDescription");
     this.activeProjectName = document.getElementById("activeProjectName");
     this.progressFill = document.getElementById("progressFill");
     this.progressLabel = document.getElementById("progressLabel");
@@ -1520,7 +1549,8 @@ class ProjectIdeaUI {
       const lastRow = document.createElement("div");
       lastRow.className = "limits-meta-row";
       const lastLabel = document.createElement("span");
-      lastLabel.textContent = "Last used";
+      lastLabel.innerHTML = ICONS.calendarClock;
+      lastLabel.setAttribute("title", "Last used");
       const lastValue = document.createElement("span");
       lastValue.textContent = lastUsed || "—";
       lastRow.append(lastLabel, lastValue);
@@ -1528,7 +1558,8 @@ class ProjectIdeaUI {
       const resetRow = document.createElement("div");
       resetRow.className = "limits-meta-row";
       const resetLabel = document.createElement("span");
-      resetLabel.textContent = "Quota reset";
+      resetLabel.innerHTML = ICONS.refreshCw;
+      resetLabel.setAttribute("title", "Quota reset");
       const resetValue = document.createElement("span");
       resetValue.textContent = resetAt || "—";
       resetRow.append(resetLabel, resetValue);
@@ -1778,7 +1809,7 @@ class ProjectIdeaUI {
       item.dataset.ideaId = idea.id;
       item.innerHTML = `
         <span>${escapeHtml(idea.text)}</span>
-        <small>Finished ${formatDate(idea.finishedAt)}</small>
+        <small>${ICONS.checkCircleMini}${formatDate(idea.finishedAt)}</small>
         <small>${escapeHtml(projectName)}</small>
         <button class="icon-button log-reopen" type="button" data-action="reopen" aria-label="Reopen idea" title="Reopen idea">
           ${ICONS.reopen}
@@ -2590,8 +2621,7 @@ class ProjectIdeaUI {
       event.preventDefault();
       const name = this.projectNameInput.value.trim();
       if (!name) return;
-      const description = this.projectDescriptionInput.value.trim();
-      const project = this.service.createProject(name, description);
+      const project = this.service.createProject(name, "");
       this.animateProjectsOnNextRender = true;
       this.pushNotification({
         title: "Project added",
@@ -2599,7 +2629,6 @@ class ProjectIdeaUI {
         tone: "success",
       });
       this.projectNameInput.value = "";
-      this.projectDescriptionInput.value = "";
       this.setActiveProjectId(project.id);
       this.render();
     });
@@ -3508,7 +3537,7 @@ class ProjectIdeaUI {
           </div>
         </div>
         <div class="project-meta">
-          <span>${stats.done}/${stats.total} complete</span>
+          <span>${stats.done}/${stats.total}</span>
           <span>${stats.percent}%</span>
         </div>
         <div class="progress-track" style="margin-top:10px;">
@@ -3573,8 +3602,8 @@ class ProjectIdeaUI {
       item.innerHTML = `
         <span class="idea-text">
           <span class="idea-title">${escapeHtml(idea.text)}</span>
-          <small>Created ${createdLabel}</small>
-          ${finishedLabel ? `<small>Finished ${finishedLabel}</small>` : ""}
+          <small>${ICONS.clock}${createdLabel}</small>
+          ${finishedLabel ? `<small>${ICONS.checkCircleMini}${finishedLabel}</small>` : ""}
         </span>
         <div class="idea-actions">
           <button class="icon-button toggle-button" type="button" data-action="toggle" aria-pressed="${idea.done}" aria-label="${toggleLabel}" title="${toggleLabel}">
@@ -3644,7 +3673,7 @@ class ProjectIdeaUI {
       item.dataset.ideaId = idea.id;
       item.innerHTML = `
         <span>${escapeHtml(idea.text)}</span>
-        <small>Finished ${formatDate(idea.finishedAt)}</small>
+        <small>${ICONS.checkCircleMini}${formatDate(idea.finishedAt)}</small>
         <small>${escapeHtml(projectName)}</small>
         <button class="icon-button log-reopen" type="button" data-action="reopen" aria-label="Reopen idea" title="Reopen idea">
           ${ICONS.reopen}
