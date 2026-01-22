@@ -698,11 +698,51 @@ button:hover {
   margin-top: 10px;
 }
 
+/* 眉題行：eyebrow + 進度條 + 百分比 */
+.eyebrow-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.eyebrow-row .eyebrow {
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.eyebrow-row .progress-track {
+  flex: 1;
+}
+
+.eyebrow-row .progress-label {
+  flex-shrink: 0;
+}
+
+/* 專案標題行：名稱 + tabs 靠右 */
+.ideas-panel .project-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ideas-panel .project-title-row h2 {
+  margin: 0;
+}
+
+.ideas-panel .idea-tabs {
+  margin: 0;
+}
+
 .progress-track {
   height: 8px;
   background: rgba(13, 27, 42, 0.08);
   border-radius: 999px;
   overflow: hidden;
+}
+
+[data-theme="dark"] .progress-track {
+  background: rgba(244, 246, 249, 0.12);
 }
 
 .progress-fill {
@@ -713,30 +753,30 @@ button:hover {
   transition: width 0.3s ease;
 }
 
-.project-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 18px;
-}
-
-.project-progress {
-  display: grid;
-  gap: 6px;
-  min-width: 120px;
+.progress-label {
+  font-family: "JetBrains Mono", "SFMono-Regular", "Consolas", monospace;
   font-size: 12px;
   color: var(--muted);
 }
 
-#progressLabel {
-  font-family: "JetBrains Mono", "SFMono-Regular", "Consolas", monospace;
+.project-description {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-description:empty {
+  display: none;
 }
 
 .idea-tabs {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin: 2px 0px 0px 0px;
 }
 
 .tab-button {
@@ -2009,9 +2049,10 @@ button:hover {
     justify-content: space-between;
   }
 
-  .project-header {
+  .ideas-panel .project-title-row {
     flex-direction: column;
     align-items: flex-start;
+    gap: 8px;
   }
 
   .log-dialog-body {

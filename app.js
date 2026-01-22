@@ -697,6 +697,7 @@ class ProjectIdeaUI {
     this.activeProjectName = document.getElementById("activeProjectName");
     this.progressFill = document.getElementById("progressFill");
     this.progressLabel = document.getElementById("progressLabel");
+    this.projectDescription = document.getElementById("projectDescription");
     this.themeToggle = document.getElementById("themeToggle");
     this.settingsToggle = document.getElementById("settingsToggle");
     this.exportButton = document.getElementById("exportData");
@@ -3829,6 +3830,7 @@ class ProjectIdeaUI {
       this.activeProjectName.textContent = "Select a project";
       this.progressFill.style.width = "0%";
       this.progressLabel.textContent = "0%";
+      this.projectDescription.textContent = "";
       this.ideaForm.classList.add("hidden");
       this.ideaTabs.classList.add("hidden");
       this.ideasList.innerHTML = "";
@@ -3839,6 +3841,7 @@ class ProjectIdeaUI {
     this.ideaForm.classList.remove("hidden");
     this.ideaTabs.classList.remove("hidden");
     this.activeProjectName.textContent = project.name;
+    this.projectDescription.textContent = project.description || "";
     const stats = project.stats();
     this.progressFill.style.width = `${stats.percent}%`;
     this.progressLabel.textContent = `${stats.percent}%`;
