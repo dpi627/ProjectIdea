@@ -1409,7 +1409,8 @@ button:hover {
 /* === Gantt Dialog === */
 .gantt-card {
   width: 95vw;
-  max-height: 80vh;
+  height: 90vh;
+  max-height: 90vh;
   display: grid;
   gap: 16px;
   grid-template-rows: auto minmax(0, 1fr);
@@ -1570,16 +1571,21 @@ button:hover {
 }
 
 .gantt-project-actions {
-  position: absolute;
-  right: 0;
-  top: 0;
   display: none;
   align-items: center;
   gap: 8px;
+  margin-left: auto;
 }
 
 .gantt-project:hover .gantt-project-actions {
   display: flex;
+}
+
+.gantt-project.is-actions-left .gantt-project-actions {
+  position: absolute;
+  right: calc(100% + 12px);
+  top: 0;
+  margin-left: 0;
 }
 
 .gantt-project-stats {

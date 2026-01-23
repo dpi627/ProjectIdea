@@ -1,7 +1,7 @@
 const STORAGE_KEY = "project-idea-collection.v1";
 const THEME_KEY = "project-idea-collection.theme";
 const UI_STATE_KEY = "project-idea-collection.ui";
-const APP_VERSION = "20260123113306";
+const APP_VERSION = "20260123153720";
 const DEFAULT_UPDATE_CHECK_INTERVAL_MS = 60_000;
 const MIN_UPDATE_CHECK_INTERVAL_MS = 10_000;
 const MAX_UPDATE_CHECK_INTERVAL_MS = 3_600_000;
@@ -786,6 +786,7 @@ class ProjectIdeaUI {
     this.ganttTotalCount = document.getElementById("ganttTotalCount");
     this.ganttCategoryFilter = new Set(GANTT_CATEGORY_OPTIONS);
     this.ganttClose = document.getElementById("ganttClose");
+    this.ganttActionFrame = null;
     this.dialogs = Array.from(document.querySelectorAll("dialog"));
 
     this.ideaForm = document.getElementById("ideaForm");
@@ -1114,6 +1115,7 @@ class ProjectIdeaUI {
       this.ganttDialog.setAttribute("open", "true");
     }
     this.syncNotifyLayer();
+    this.queueGanttProjectActions();
   }
 
   updateGanttCategoryTabs() {
@@ -1239,6 +1241,59 @@ class ProjectIdeaUI {
     this.ganttProjects.innerHTML = projectsWithDates
       .map(project => this.renderGanttProject(project, start, end))
       .join("");
+    this.queueGanttProjectActions();
+  }
+
+  queueGanttProjectActions() {
+    if (!this.ganttDialog || !this.ganttProjects) return;
+    if (!this.ganttDialog.open && !this.ganttDialog.hasAttribute("open")) return;
+    if (this.ganttActionFrame) return;
+    this.ganttActionFrame = requestAnimationFrame(() => {
+      this.ganttActionFrame = null;
+      this.syncGanttProjectActions();
+    });
+  }
+
+  syncGanttProjectActions() {
+    if (!this.ganttProjects) return;
+    const containerRect = this.ganttProjects.getBoundingClientRect();
+    if (!containerRect.width) return;
+    const projects = Array.from(this.ganttProjects.querySelectorAll(".gantt-project"));
+    projects.forEach((project) => {
+      const header = project.querySelector(".gantt-project-header");
+      const label = project.querySelector(".gantt-project-label");
+      const actions = project.querySelector(".gantt-project-actions");
+      if (!header || !label || !actions) return;
+      const labelRect = label.getBoundingClientRect();
+      const headerRect = header.getBoundingClientRect();
+      const actionsWidth = this.measureGanttActionsWidth(actions);
+      const gapValue = parseFloat(getComputedStyle(header).gap);
+      const gap = Number.isFinite(gapValue) ? gapValue : 12;
+      const projectedRight = headerRect.left + labelRect.width + gap + actionsWidth;
+      const shouldFlip = projectedRight > containerRect.right - 4;
+      project.classList.toggle("is-actions-left", shouldFlip);
+    });
+  }
+
+  measureGanttActionsWidth(actions) {
+    const computed = getComputedStyle(actions);
+    if (computed.display !== "none") {
+      return actions.getBoundingClientRect().width;
+    }
+    const prevDisplay = actions.style.display;
+    const prevVisibility = actions.style.visibility;
+    const prevPosition = actions.style.position;
+    const prevPointerEvents = actions.style.pointerEvents;
+    actions.style.display = "flex";
+    actions.style.visibility = "hidden";
+    actions.style.position = "absolute";
+    actions.style.pointerEvents = "none";
+    const width = actions.getBoundingClientRect().width;
+    actions.style.display = prevDisplay;
+    actions.style.visibility = prevVisibility;
+    actions.style.position = prevPosition;
+    actions.style.pointerEvents = prevPointerEvents;
+    return width;
   }
 
   calculateGanttTimeRange(year) {
@@ -3278,6 +3333,9 @@ class ProjectIdeaUI {
       if (this.logDialog.open || this.logDialog.hasAttribute("open")) {
         this.resizeLogChart();
         this.renderLogDialogChart();
+      }
+      if (this.ganttDialog?.open || this.ganttDialog?.hasAttribute("open")) {
+        this.queueGanttProjectActions();
       }
     });
 
