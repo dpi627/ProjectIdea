@@ -769,6 +769,13 @@ button:hover {
   white-space: nowrap;
 }
 
+.ideas-panel .project-description {
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
 .project-description:empty {
   display: none;
 }
@@ -1426,6 +1433,34 @@ button:hover {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.gantt-total {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px dashed var(--border);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.gantt-total-count {
+  color: var(--ink);
+  font-family: "JetBrains Mono", "SFMono-Regular", "Consolas", monospace;
+  font-weight: 600;
+}
+
+.gantt-total:hover,
+.gantt-total:focus-visible {
+  border-color: rgba(31, 138, 112, 0.4);
+  color: var(--ink);
+  outline: none;
 }
 
 .gantt-tab-button {

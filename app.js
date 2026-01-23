@@ -1,12 +1,13 @@
 const STORAGE_KEY = "project-idea-collection.v1";
 const THEME_KEY = "project-idea-collection.theme";
 const UI_STATE_KEY = "project-idea-collection.ui";
-const APP_VERSION = "20260114221000";
+const APP_VERSION = "20260123113306";
 const DEFAULT_UPDATE_CHECK_INTERVAL_MS = 60_000;
 const MIN_UPDATE_CHECK_INTERVAL_MS = 10_000;
 const MAX_UPDATE_CHECK_INTERVAL_MS = 3_600_000;
 const CHART_JS_SRC =
   "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js";
+const GANTT_CATEGORY_OPTIONS = ["CI", "MP", "SP"];
 
 const createId = () => {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -260,12 +261,20 @@ class LocalStorageProjectRepository {
   }
 }
 
+const daysAgo = (days) =>
+  new Date(Date.now() - days * 24 * 60 * 60_000).toISOString();
+
 const createMockProjects = () => [
   new Project({
     name: "Weekend Build",
     description: "Launch a one-weekend prototype.",
+    startDate: "2026-02-03",
+    dueDate: "2026-04-15",
+    category: "MP",
     ideas: [
-      { text: "Sketch 3 quick UX flows", done: true },
+      { text: "Sketch 3 quick UX flows", done: true, finishedAt: daysAgo(12) },
+      { text: "Finalize launch checklist", done: true, finishedAt: daysAgo(4) },
+      { text: "Run a quick usability test", done: true, finishedAt: daysAgo(9) },
       { text: "Draft a one-page pitch", done: false },
       { text: "Prototype core screen", done: false },
     ],
@@ -273,8 +282,12 @@ const createMockProjects = () => [
   new Project({
     name: "Growth Experiments",
     description: "Short tests to unlock new channels.",
+    startDate: "2026-05-10",
+    dueDate: "2026-08-20",
+    category: "CI",
     ideas: [
-      { text: "Interview 5 creators", done: true },
+      { text: "Interview 5 creators", done: true, finishedAt: daysAgo(18) },
+      { text: "Ship referral prompt v1", done: true, finishedAt: daysAgo(7) },
       { text: "Write launch email v1", done: false },
       { text: "Plan onboarding nudge", done: false },
       { text: "Collect waitlist insights", done: false },
@@ -769,7 +782,9 @@ class ProjectIdeaUI {
     this.ganttProjects = document.getElementById("ganttProjects");
     this.ganttRange = document.getElementById("ganttRange");
     this.ganttCategoryTabs = document.getElementById("ganttCategoryTabs");
-    this.ganttCategoryFilter = "ALL";
+    this.ganttTotalButton = document.getElementById("ganttTotalButton");
+    this.ganttTotalCount = document.getElementById("ganttTotalCount");
+    this.ganttCategoryFilter = new Set(GANTT_CATEGORY_OPTIONS);
     this.ganttClose = document.getElementById("ganttClose");
     this.dialogs = Array.from(document.querySelectorAll("dialog"));
 
@@ -1116,16 +1131,37 @@ class ProjectIdeaUI {
       });
 
     const counts = {
-      ALL: allProjects.length,
-      CI: allProjects.filter(p => p.category === "CI").length,
-      MP: allProjects.filter(p => p.category === "MP").length,
-      SP: allProjects.filter(p => p.category === "SP").length
+      CI: 0,
+      MP: 0,
+      SP: 0,
     };
+    allProjects.forEach((project) => {
+      if (counts[project.category] !== undefined) {
+        counts[project.category] += 1;
+      }
+    });
 
-    this.ganttCategoryTabs.querySelectorAll(".gantt-tab-button").forEach(btn => {
+    if (this.ganttTotalCount) {
+      this.ganttTotalCount.textContent = allProjects.length;
+    }
+
+    this.ganttCategoryTabs.querySelectorAll(".gantt-tab-button").forEach((btn) => {
       const category = btn.dataset.category;
       const countEl = btn.querySelector(".tab-count");
-      if (countEl) countEl.textContent = counts[category] || 0;
+      if (countEl && category) {
+        countEl.textContent = counts[category] || 0;
+      }
+    });
+    this.syncGanttCategoryButtons();
+  }
+
+  syncGanttCategoryButtons() {
+    if (!this.ganttCategoryTabs) return;
+    this.ganttCategoryTabs.querySelectorAll(".gantt-tab-button").forEach((button) => {
+      const category = button.dataset.category;
+      const isActive = category ? this.ganttCategoryFilter.has(category) : false;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-pressed", isActive);
     });
   }
 
@@ -1151,7 +1187,9 @@ class ProjectIdeaUI {
 
   renderGanttChart() {
     const selectedYear = parseInt(this.ganttRange?.value || new Date().getFullYear(), 10);
-    const categoryFilter = this.ganttCategoryFilter || "ALL";
+    const activeCategories = Array.from(this.ganttCategoryFilter || []);
+    const allCategoriesSelected =
+      activeCategories.length === GANTT_CATEGORY_OPTIONS.length;
     const { start, end, monthLabels } = this.calculateGanttTimeRange(selectedYear);
     const now = new Date();
     const currentYM = `${now.getFullYear()}/${now.getMonth() + 1}`;
@@ -1166,8 +1204,14 @@ class ProjectIdeaUI {
       .filter(p => p.startDate && p.dueDate);
 
     // 套用分類過濾
-    if (categoryFilter !== "ALL") {
-      projectsWithDates = projectsWithDates.filter(p => p.category === categoryFilter);
+    if (!allCategoriesSelected) {
+      if (activeCategories.length === 0) {
+        projectsWithDates = [];
+      } else {
+        projectsWithDates = projectsWithDates.filter((project) =>
+          activeCategories.includes(project.category)
+        );
+      }
     }
 
     // 套用年度過濾 - 專案起迄日期必須與選擇年度有交集
@@ -1181,9 +1225,12 @@ class ProjectIdeaUI {
     projectsWithDates.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
 
     if (projectsWithDates.length === 0) {
-      const message = categoryFilter !== "ALL"
-        ? `No ${categoryFilter} projects in ${selectedYear}`
-        : `No projects in ${selectedYear}`;
+      const categoryLabel = activeCategories.join(" / ");
+      const message = activeCategories.length === 0
+        ? "Select at least one category to view projects."
+        : allCategoriesSelected
+          ? `No projects in ${selectedYear}`
+          : `No ${categoryLabel} projects in ${selectedYear}`;
       this.ganttProjects.innerHTML = `<div class="gantt-empty">${escapeHtml(message)}</div>`;
       return;
     }
@@ -3072,16 +3119,23 @@ class ProjectIdeaUI {
       this.renderGanttChart();
     });
 
+    this.ganttTotalButton?.addEventListener("click", () => {
+      this.ganttCategoryFilter = new Set(GANTT_CATEGORY_OPTIONS);
+      this.syncGanttCategoryButtons();
+      this.renderGanttChart();
+    });
+
     this.ganttCategoryTabs?.addEventListener("click", (e) => {
       const btn = e.target.closest(".gantt-tab-button");
       if (!btn) return;
       const category = btn.dataset.category;
-      this.ganttCategoryFilter = category;
-      this.ganttCategoryTabs.querySelectorAll(".gantt-tab-button").forEach(b => {
-        const isActive = b.dataset.category === category;
-        b.classList.toggle("is-active", isActive);
-        b.setAttribute("aria-pressed", isActive);
-      });
+      if (!category || !GANTT_CATEGORY_OPTIONS.includes(category)) return;
+      if (this.ganttCategoryFilter.has(category)) {
+        this.ganttCategoryFilter.delete(category);
+      } else {
+        this.ganttCategoryFilter.add(category);
+      }
+      this.syncGanttCategoryButtons();
       this.renderGanttChart();
     });
 
