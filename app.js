@@ -1,7 +1,7 @@
 const STORAGE_KEY = "project-idea-collection.v1";
 const THEME_KEY = "project-idea-collection.theme";
 const UI_STATE_KEY = "project-idea-collection.ui";
-const APP_VERSION = "20260123153720";
+const APP_VERSION = "20260123161733";
 const DEFAULT_UPDATE_CHECK_INTERVAL_MS = 60_000;
 const MIN_UPDATE_CHECK_INTERVAL_MS = 10_000;
 const MAX_UPDATE_CHECK_INTERVAL_MS = 3_600_000;
@@ -288,6 +288,8 @@ const createMockProjects = () => [
     ideas: [
       { text: "Interview 5 creators", done: true, finishedAt: daysAgo(18) },
       { text: "Ship referral prompt v1", done: true, finishedAt: daysAgo(7) },
+      { text: "Analyze activation funnel", done: true, finishedAt: daysAgo(2) },
+      { text: "Draft growth experiment doc", done: true, finishedAt: daysAgo(1) },
       { text: "Write launch email v1", done: false },
       { text: "Plan onboarding nudge", done: false },
       { text: "Collect waitlist insights", done: false },
