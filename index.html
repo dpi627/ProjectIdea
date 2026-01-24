@@ -10,7 +10,7 @@
     href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMxZjhhNzAiLz48cG9seWdvbiBwb2ludHM9IjMyIDEwIDU0IDMyIDMyIDU0IDEwIDMyIiBmaWxsPSIjZmZmZmZmIi8+PC9zdmc+"
   />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-  <link rel="stylesheet" href="styles.css?v=20260123161733" />
+  <link rel="stylesheet" href="styles.css?v=20260124173038" />
 </head>
 <body>
   <canvas id="bgCanvas" aria-hidden="true"></canvas>
@@ -310,6 +310,19 @@
           </label>
         </div>
       </div>
+      <div id="limitsAccountSelector" class="limits-account-selector hidden">
+        <div class="account-selector-wrapper">
+          <label class="account-selector-label">
+            <span>Account</span>
+            <select id="limitsAccountSelect" aria-label="Select account">
+              <option value="-1">All accounts</option>
+            </select>
+          </label>
+          <div class="account-info">
+            <span class="account-count" id="limitsAccountCount"></span>
+          </div>
+        </div>
+      </div>
       <div class="limits-body">
         <div id="limitsLoading" class="limits-loading hidden" aria-live="polite">
           <div class="limits-loading-indicator" aria-hidden="true">
@@ -387,57 +400,47 @@
             <div class="settings-section">
               <div class="settings-row">
                 <div>
-                  <h4>Export data</h4>
-                  <p class="settings-help">Download a backup of your workspace.</p>
+                  <h4>Data migration</h4>
+                  <p class="settings-help">Export or import workspace backup files.</p>
                 </div>
                 <div class="settings-actions">
-                  <button id="settingsExport" class="primary" type="button">Export</button>
+                  <button id="settingsExport" class="ghost" type="button">Export</button>
+                  <button id="settingsImport" class="primary" type="button">Import</button>
                 </div>
               </div>
             </div>
             <div class="settings-section">
               <div class="settings-row">
                 <div>
-                  <h4>Import data</h4>
-                  <p class="settings-help">Replace the current workspace with a backup file.</p>
+                  <h4>Data source</h4>
+                  <p class="settings-help">Choose where to store your data.</p>
                 </div>
-                <div class="settings-actions">
-                  <button id="settingsImport" class="ghost" type="button">Import</button>
+                <div class="data-source-selector" id="dataSourceSelector">
+                  <button type="button" data-source="localStorage" class="is-active">
+                    <span class="source-icon" data-icon="database"></span>
+                    <span>Browser Storage</span>
+                  </button>
+                  <button type="button" data-source="localDevice">
+                    <span class="source-icon" data-icon="folder"></span>
+                    <span>Local File</span>
+                  </button>
                 </div>
+              </div>
+              <div class="data-source-status" id="dataSourceStatus">
+                <span class="status-dot"></span>
+                <span class="status-text">Using browser localStorage</span>
               </div>
             </div>
             <div class="settings-section">
-              <h4>JSON format</h4>
-              <pre class="settings-code">{
-  "projects": [
-    {
-      "id": "project-id",
-      "name": "Project name",
-      "description": "",
-      "ideas": [
-        {
-          "id": "idea-id",
-          "text": "Idea text",
-          "done": false,
-          "createdAt": 1700000000000,
-          "finishedAt": null
-        }
-      ]
-    }
-  ],
-  "theme": "system",
-  "uiState": {
-    "activeProjectId": "project-id",
-    "isLogVisible": false,
-    "ideaFilter": "todo",
-    "copyWithUltrathink": false,
-    "serviceMonitorEnabled": false,
-    "serviceMonitorUrl": "http://localhost:8080/health",
-    "serviceMonitorIntervalMs": 5000,
-    "updateCheckIntervalMs": 60000,
-    "modelUsageUrl": "http://localhost:8080/health"
-  }
-}</pre>
+              <div class="settings-row">
+                <div>
+                  <h4>Reset data</h4>
+                  <p class="settings-help">Delete all projects and ideas permanently.</p>
+                </div>
+                <div class="settings-actions">
+                  <button id="settingsResetData" class="ghost" type="button">Reset</button>
+                </div>
+              </div>
             </div>
           </section>
           <section class="settings-panel" data-panel="idea" aria-hidden="true">
@@ -472,12 +475,12 @@
                 </button>
               </div>
               <label class="settings-field">
-                <span>Proxy URL</span>
+                <span>Health check URL</span>
                 <input id="settingsProxyUrl" type="text" placeholder="http://localhost:8080/health" />
               </label>
               <label class="settings-field">
                 <span>Model usage endpoint</span>
-                <input id="settingsUsageUrl" type="text" placeholder="http://localhost:8080/health" />
+                <input id="settingsUsageUrl" type="text" placeholder="http://localhost:8080/account-limits" />
               </label>
               <label class="settings-field">
                 <span>Check interval (seconds)</span>
@@ -537,6 +540,33 @@
         </div>
       </div>
     </div>
+  </dialog>
+
+  <dialog id="dataSourceDialog" class="dialog">
+    <form id="dataSourceForm" class="dialog-card" autocomplete="off">
+      <h3>Switch data source</h3>
+      <p class="dialog-message">The new source contains existing data. How would you like to proceed?</p>
+      <div class="settings-options">
+        <label class="settings-option">
+          <input type="radio" name="mergeStrategy" value="overwrite" checked />
+          <div>
+            <span class="option-title">Overwrite</span>
+            <span class="option-note">Replace current data with new source</span>
+          </div>
+        </label>
+        <label class="settings-option">
+          <input type="radio" name="mergeStrategy" value="merge" />
+          <div>
+            <span class="option-title">Merge</span>
+            <span class="option-note">Combine both sources (newer wins conflicts)</span>
+          </div>
+        </label>
+      </div>
+      <div class="dialog-actions">
+        <button id="dataSourceCancel" class="ghost" type="button">Cancel</button>
+        <button class="primary" type="submit">Continue</button>
+      </div>
+    </form>
   </dialog>
 
   <dialog id="logDialog" class="dialog">
@@ -608,6 +638,6 @@
     </div>
   </dialog>
 
-  <script src="app.js?v=20260123161733"></script>
+  <script src="app.js?v=20260124173038"></script>
 </body>
 </html>

@@ -1,7 +1,8 @@
 const STORAGE_KEY = "project-idea-collection.v1";
 const THEME_KEY = "project-idea-collection.theme";
 const UI_STATE_KEY = "project-idea-collection.ui";
-const APP_VERSION = "20260123161733";
+const LOCAL_FILE_NAME = "project-ideas.json";
+const APP_VERSION = "20260124173038";
 const DEFAULT_UPDATE_CHECK_INTERVAL_MS = 60_000;
 const MIN_UPDATE_CHECK_INTERVAL_MS = 10_000;
 const MAX_UPDATE_CHECK_INTERVAL_MS = 3_600_000;
@@ -15,6 +16,23 @@ const createId = () => {
   }
   return `id_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 };
+
+const serializeProjects = (projects) =>
+  projects.map((project) => ({
+    id: project.id,
+    name: project.name,
+    description: project.description,
+    startDate: project.startDate,
+    dueDate: project.dueDate,
+    category: project.category,
+    ideas: project.ideas.map((idea) => ({
+      id: idea.id,
+      text: idea.text,
+      done: idea.done,
+      createdAt: idea.createdAt,
+      finishedAt: idea.finishedAt,
+    })),
+  }));
 
 
 const formatDate = (value) => {
@@ -185,6 +203,19 @@ const ICONS = {
       <path d="M3 18h5" />
     </svg>
   `,
+  database: `
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <ellipse cx="12" cy="5" rx="9" ry="3" />
+      <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+      <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+    </svg>
+  `,
+  folderOpen: `
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+      <path d="M2 10h20" />
+    </svg>
+  `,
 };
 
 // Domain layer
@@ -242,22 +273,167 @@ class LocalStorageProjectRepository {
   }
 
   save(projects) {
-    const payload = projects.map((project) => ({
-      id: project.id,
-      name: project.name,
-      description: project.description,
-      startDate: project.startDate,
-      dueDate: project.dueDate,
-      category: project.category,
-      ideas: project.ideas.map((idea) => ({
-        id: idea.id,
-        text: idea.text,
-        done: idea.done,
-        createdAt: idea.createdAt,
-        finishedAt: idea.finishedAt,
-      })),
-    }));
+    const payload = serializeProjects(projects);
     localStorage.setItem(this.storageKey, JSON.stringify(payload));
+  }
+}
+
+class FileSystemDataRepository {
+  constructor() {
+    this.fileHandle = null;
+    this.DB_NAME = "project-idea-studio";
+    this.DB_STORE = "fileHandles";
+  }
+
+  async openDatabase() {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(this.DB_NAME, 1);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains(this.DB_STORE)) {
+          db.createObjectStore(this.DB_STORE);
+        }
+      };
+    });
+  }
+
+  async saveFileHandle(handle) {
+    try {
+      const db = await this.openDatabase();
+      const tx = db.transaction(this.DB_STORE, "readwrite");
+      const store = tx.objectStore(this.DB_STORE);
+      store.put(handle, "currentFile");
+      return new Promise((resolve, reject) => {
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (error) {
+      console.warn("Failed to save file handle to IndexedDB", error);
+    }
+  }
+
+  async loadFileHandle() {
+    try {
+      const db = await this.openDatabase();
+      const tx = db.transaction(this.DB_STORE, "readonly");
+      const store = tx.objectStore(this.DB_STORE);
+      const request = store.get("currentFile");
+      return new Promise((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.warn("Failed to load file handle from IndexedDB", error);
+      return null;
+    }
+  }
+
+  async clearFileHandle() {
+    try {
+      const db = await this.openDatabase();
+      const tx = db.transaction(this.DB_STORE, "readwrite");
+      const store = tx.objectStore(this.DB_STORE);
+      store.delete("currentFile");
+      return new Promise((resolve, reject) => {
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (error) {
+      console.warn("Failed to clear file handle from IndexedDB", error);
+    }
+  }
+
+  async init() {
+    this.fileHandle = await this.loadFileHandle();
+    if (this.fileHandle) {
+      const hasPermission = await this.verifyPermission();
+      if (!hasPermission) {
+        this.fileHandle = null;
+      }
+    }
+    return !!this.fileHandle;
+  }
+
+  async selectFile() {
+    const [handle] = await window.showOpenFilePicker({
+      types: [
+        {
+          description: "JSON Files",
+          accept: { "application/json": [".json"] },
+        },
+      ],
+    });
+    this.fileHandle = handle;
+    await this.saveFileHandle(handle);
+    return handle;
+  }
+
+  async selectStorageLocation() {
+    if ("showDirectoryPicker" in window) {
+      const directoryHandle = await window.showDirectoryPicker();
+      const fileHandle = await directoryHandle.getFileHandle(LOCAL_FILE_NAME, {
+        create: true,
+      });
+      this.fileHandle = fileHandle;
+      await this.saveFileHandle(fileHandle);
+      return fileHandle;
+    }
+    return this.createFile();
+  }
+
+  async createFile() {
+    const handle = await window.showSaveFilePicker({
+      suggestedName: LOCAL_FILE_NAME,
+      types: [
+        {
+          description: "JSON Files",
+          accept: { "application/json": [".json"] },
+        },
+      ],
+    });
+    this.fileHandle = handle;
+    await this.saveFileHandle(handle);
+    return handle;
+  }
+
+  async load() {
+    if (!this.fileHandle) return null;
+    try {
+      const file = await this.fileHandle.getFile();
+      const text = await file.text();
+      return text.trim() ? JSON.parse(text) : null;
+    } catch (error) {
+      console.warn("Failed to load data from file", error);
+      return null;
+    }
+  }
+
+  async save(data) {
+    if (!this.fileHandle) throw new Error("No file selected");
+    const writable = await this.fileHandle.createWritable();
+    await writable.write(JSON.stringify(data, null, 2));
+    await writable.close();
+  }
+
+  async verifyPermission() {
+    const options = { mode: "readwrite" };
+    try {
+      if ((await this.fileHandle.queryPermission(options)) === "granted") {
+        return true;
+      }
+      if ((await this.fileHandle.requestPermission(options)) === "granted") {
+        return true;
+      }
+    } catch (error) {
+      console.warn("Permission check failed", error);
+    }
+    return false;
+  }
+
+  getFileName() {
+    return this.fileHandle?.name || null;
   }
 }
 
@@ -302,15 +478,29 @@ class ProjectService {
   constructor(repository) {
     this.repository = repository;
     this.projects = this.repository.load();
+    this.wasSeeded = false;
+    this.onChange = null;
 
     if (this.projects.length === 0) {
       this.projects = createMockProjects();
       this.repository.save(this.projects);
+      this.wasSeeded = true;
     }
   }
 
   getProjects() {
     return this.projects;
+  }
+
+  reloadFromStorage() {
+    this.projects = this.repository.load();
+    return this.projects;
+  }
+
+  notifyChange() {
+    if (typeof this.onChange === "function") {
+      this.onChange();
+    }
   }
 
   getFinishedLog() {
@@ -334,25 +524,16 @@ class ProjectService {
     });
     this.projects = [project, ...this.projects];
     this.repository.save(this.projects);
+    this.notifyChange();
     return project;
   }
 
+  persist() {
+    this.repository.save(this.projects);
+  }
+
   exportProjects() {
-    return this.projects.map((project) => ({
-      id: project.id,
-      name: project.name,
-      description: project.description,
-      startDate: project.startDate,
-      dueDate: project.dueDate,
-      category: project.category,
-      ideas: project.ideas.map((idea) => ({
-        id: idea.id,
-        text: idea.text,
-        done: idea.done,
-        createdAt: idea.createdAt,
-        finishedAt: idea.finishedAt,
-      })),
-    }));
+    return serializeProjects(this.projects);
   }
 
   importProjects(payload) {
@@ -388,6 +569,7 @@ class ProjectService {
     });
     this.projects = projects;
     this.repository.save(this.projects);
+    this.notifyChange();
     return this.projects;
   }
 
@@ -395,12 +577,14 @@ class ProjectService {
     const project = this.findProject(projectId);
     project.name = name.trim();
     this.repository.save(this.projects);
+    this.notifyChange();
   }
 
   updateProjectDescription(projectId, description) {
     const project = this.findProject(projectId);
     project.description = description.trim();
     this.repository.save(this.projects);
+    this.notifyChange();
   }
 
   updateProjectDates(projectId, startDate, dueDate) {
@@ -408,6 +592,7 @@ class ProjectService {
     project.startDate = startDate || null;
     project.dueDate = dueDate || null;
     this.repository.save(this.projects);
+    this.notifyChange();
   }
 
   updateProjectCategory(projectId, category) {
@@ -418,29 +603,34 @@ class ProjectService {
     }
     project.category = category;
     this.repository.save(this.projects);
+    this.notifyChange();
   }
 
   deleteProject(projectId) {
     this.projects = this.projects.filter((item) => item.id !== projectId);
     this.repository.save(this.projects);
+    this.notifyChange();
   }
 
   addIdea(projectId, text) {
     const project = this.findProject(projectId);
     project.ideas.unshift(new Idea({ text: text.trim() }));
     this.repository.save(this.projects);
+    this.notifyChange();
   }
 
   updateIdeaText(projectId, ideaId, text) {
     const idea = this.findIdea(projectId, ideaId);
     idea.text = text.trim();
     this.repository.save(this.projects);
+    this.notifyChange();
   }
 
   deleteIdea(projectId, ideaId) {
     const project = this.findProject(projectId);
     project.ideas = project.ideas.filter((idea) => idea.id !== ideaId);
     this.repository.save(this.projects);
+    this.notifyChange();
   }
 
   toggleIdea(projectId, ideaId) {
@@ -456,6 +646,7 @@ class ProjectService {
       project.ideas.unshift(idea);
     }
     this.repository.save(this.projects);
+    this.notifyChange();
   }
 
   moveIdea(projectId, ideaId, direction) {
@@ -466,6 +657,7 @@ class ProjectService {
     const [moved] = project.ideas.splice(index, 1);
     project.ideas.splice(nextIndex, 0, moved);
     this.repository.save(this.projects);
+    this.notifyChange();
   }
 
   moveIdeaTo(projectId, ideaId, targetIdeaId) {
@@ -477,6 +669,7 @@ class ProjectService {
     const [moved] = project.ideas.splice(fromIndex, 1);
     project.ideas.splice(toIndex, 0, moved);
     this.repository.save(this.projects);
+    this.notifyChange();
   }
 
   moveProject(projectId, targetProjectId) {
@@ -487,6 +680,7 @@ class ProjectService {
     const [moved] = this.projects.splice(fromIndex, 1);
     this.projects.splice(toIndex, 0, moved);
     this.repository.save(this.projects);
+    this.notifyChange();
   }
 
   findProject(projectId) {
@@ -702,6 +896,13 @@ class ProjectIdeaUI {
     this.dragOverProject = null;
     this.dragOverIdea = null;
     const uiState = this.loadUiState();
+    this.seedState = this.normalizeSeedState(uiState.seedState);
+    if (this.seedState.localStorage === null) {
+      this.seedState.localStorage = this.service.wasSeeded;
+    }
+    if (this.seedState.localDevice === null) {
+      this.seedState.localDevice = false;
+    }
     this.isLogVisible =
       typeof uiState.isLogVisible === "boolean" ? uiState.isLogVisible : false;
     this.activeProjectId = this.resolveActiveProjectId(uiState.activeProjectId);
@@ -753,6 +954,9 @@ class ProjectIdeaUI {
     this.limitsList = document.getElementById("limitsList");
     this.limitsEmpty = document.getElementById("limitsEmpty");
     this.limitsLoading = document.getElementById("limitsLoading");
+    this.limitsAccountSelector = document.getElementById("limitsAccountSelector");
+    this.limitsAccountSelect = document.getElementById("limitsAccountSelect");
+    this.limitsAccountCount = document.getElementById("limitsAccountCount");
     this.settingsDialog = document.getElementById("settingsDialog");
     this.settingsClose = document.getElementById("settingsClose");
     this.settingsMenuButtons = Array.from(
@@ -778,6 +982,12 @@ class ProjectIdeaUI {
       document.querySelectorAll('input[name="themePreference"]')
     );
     this.settingsCode = document.querySelector(".settings-code");
+    this.dataSourceSelector = document.getElementById("dataSourceSelector");
+    this.dataSourceStatus = document.getElementById("dataSourceStatus");
+    this.settingsResetData = document.getElementById("settingsResetData");
+    this.dataSourceDialog = document.getElementById("dataSourceDialog");
+    this.dataSourceForm = document.getElementById("dataSourceForm");
+    this.dataSourceCancel = document.getElementById("dataSourceCancel");
     this.ganttToggle = document.getElementById("ganttToggle");
     this.ganttDialog = document.getElementById("ganttDialog");
     this.ganttTimeline = document.getElementById("ganttTimeline");
@@ -826,6 +1036,7 @@ class ProjectIdeaUI {
     this.editingProjectId = null;
     this.editingMode = null;
     this.pendingConfirm = null;
+    this.pendingConfirmCancel = null;
     this.animateProjectsOnNextRender = true;
     this.animateIdeasOnNextRender = true;
     this.logFilterValue = "";
@@ -847,45 +1058,52 @@ class ProjectIdeaUI {
     this.chartJsPromise = null;
     this.limitsModels = [];
     this.limitsCharts = new Map();
-    this.limitsRefreshMs = 6000;
+    this.limitsRefreshMs = 30000;
     this.limitsTimer = null;
     this.limitsInFlight = false;
     this.limitsIsLoading = false;
     this.limitsHasRendered = false;
     this.limitsHasData = false;
+    this.limitsAccounts = [];
+    this.limitsActiveAccountIndex = -1;
+    this.limitsRawPayload = null;
     this.updateCheckIntervalMs = this.normalizeUpdateCheckIntervalMs(
       uiState.updateCheckIntervalMs
     );
     this.updatePrompted = false;
+    this.pendingUpdateVersion = null;
     this.updateTimer = null;
+    this.updateCheckInFlight = false;
     this.serviceMonitorEnabled =
       typeof uiState.serviceMonitorEnabled === "boolean"
         ? uiState.serviceMonitorEnabled
         : false;
     this.serviceMonitorUrl = this.normalizeProxyUrl(uiState.serviceMonitorUrl);
-    const legacyUsageUrl = "http://localhost:8080/account-limits";
-    const usageSource =
-      uiState.modelUsageUrl === legacyUsageUrl
-        ? "http://localhost:8080/health"
-        : uiState.modelUsageUrl;
-    this.modelUsageUrl = this.normalizeModelUsageUrl(usageSource);
+    this.modelUsageUrl = this.normalizeModelUsageUrl(uiState.modelUsageUrl);
     this.serviceMonitorIntervalMs =
       typeof uiState.serviceMonitorIntervalMs === "number" &&
       uiState.serviceMonitorIntervalMs >= 1000
         ? uiState.serviceMonitorIntervalMs
-        : 5000;
+        : 30000;
     this.serviceMonitorTimeoutMs = 2500;
     this.serviceMonitorTimer = null;
     this.serviceMonitorInFlight = false;
     this.serviceMonitorStatus = "checking";
     this.notifyLimit = 4;
     this.notifyDuration = 3200;
+    this.dataSource = uiState.dataSource || "localStorage";
+    this.fileSystemRepo = new FileSystemDataRepository();
+    this.dataSourcePendingStrategy = null;
+    this.service.onChange = () => {
+      this.markDataSourceDirty();
+    };
 
     const initialTheme = this.themeService.init();
     this.updateThemeLabel(initialTheme);
     this.background.updatePalette();
     this.applyLogVisibility();
     this.updateDataButtons();
+    this.initDataSource();
     this.persistUiState();
     this.initServiceMonitor();
     this.initUpdateMonitor();
@@ -903,6 +1121,75 @@ class ProjectIdeaUI {
       console.warn("Failed to parse UI state", error);
       return {};
     }
+  }
+
+  normalizeSeedState(value) {
+    if (!value || typeof value !== "object") {
+      return { localStorage: null, localDevice: null };
+    }
+    return {
+      localStorage:
+        typeof value.localStorage === "boolean" ? value.localStorage : null,
+      localDevice:
+        typeof value.localDevice === "boolean" ? value.localDevice : null,
+    };
+  }
+
+  isSeedDataSource(source) {
+    return Boolean(this.seedState?.[source]);
+  }
+
+  setSeedState(source, isSeed, { skipPersist = false } = {}) {
+    if (!source) return;
+    this.seedState[source] = Boolean(isSeed);
+    if (!skipPersist) {
+      this.persistUiState();
+    }
+  }
+
+  markDataSourceDirty() {
+    if (!this.seedState || this.seedState[this.dataSource] === false) return;
+    this.seedState[this.dataSource] = false;
+    this.persistUiState();
+  }
+
+  buildFilePayload(projects, { seed = false } = {}) {
+    return {
+      meta: {
+        seed: Boolean(seed),
+        updatedAt: new Date().toISOString(),
+        appVersion: APP_VERSION,
+      },
+      projects: serializeProjects(projects),
+    };
+  }
+
+  getFileSeedState(data) {
+    if (!data || typeof data !== "object") return false;
+    if (data.meta && typeof data.meta === "object") {
+      return data.meta.seed === true;
+    }
+    return false;
+  }
+
+  applyProjects(projects) {
+    this.service.projects = projects;
+    this.activeProjectId = this.resolveActiveProjectId(this.activeProjectId);
+  }
+
+  buildSeedProjects() {
+    return createMockProjects();
+  }
+
+  shouldPromptToMigrate(source, projects) {
+    if (this.isSeedDataSource(source)) return false;
+    return Array.isArray(projects) && projects.length > 0;
+  }
+
+  supportsLocalFileAccess() {
+    return (
+      "showDirectoryPicker" in window || "showSaveFilePicker" in window
+    );
   }
 
   resolveActiveProjectId(projectId) {
@@ -928,6 +1215,8 @@ class ProjectIdeaUI {
       serviceMonitorIntervalMs: this.serviceMonitorIntervalMs,
       updateCheckIntervalMs: this.updateCheckIntervalMs,
       modelUsageUrl: this.modelUsageUrl,
+      dataSource: this.dataSource,
+      seedState: this.seedState,
     };
   }
 
@@ -1028,7 +1317,7 @@ class ProjectIdeaUI {
 
   normalizeModelUsageUrl(value) {
     const clean = String(value || "").trim();
-    return clean || "http://localhost:8080/health";
+    return clean || "http://localhost:8080/account-limits";
   }
 
   normalizeUpdateCheckIntervalMs(value) {
@@ -1044,19 +1333,30 @@ class ProjectIdeaUI {
     return clamped;
   }
 
-  exportData() {
-    const data = this.buildExportPayload();
-    const json = JSON.stringify(data, null, 2);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    const stamp = new Date().toISOString().slice(0, 10);
-    link.href = url;
-    link.download = `project-ideas-${stamp}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  async exportData() {
+    try {
+      if (this.dataSource === "localDevice") {
+        await this.persistToFile();
+      }
+      const data = this.buildExportPayload();
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const stamp = new Date().toISOString().slice(0, 10);
+      link.href = url;
+      link.download = `project-ideas-${stamp}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      this.pushNotification({
+        title: "Export failed",
+        message: "Unable to export workspace data.",
+        tone: "warning",
+      });
+    }
   }
 
   triggerImport() {
@@ -1544,6 +1844,11 @@ class ProjectIdeaUI {
     }
     this.stopLimitsUpdates();
     this.syncNotifyLayer();
+    // Reset account selection
+    this.limitsActiveAccountIndex = -1;
+    if (this.limitsAccountSelect) {
+      this.limitsAccountSelect.value = "-1";
+    }
   }
 
   startLimitsUpdates() {
@@ -1564,16 +1869,59 @@ class ProjectIdeaUI {
 
   normalizeLimitsPayload(payload) {
     const items = [];
-    if (payload && typeof payload === "object") {
-      const account = Array.isArray(payload.accounts) ? payload.accounts[0] : null;
-      const accountModels = account?.limits || account?.models;
-      if (accountModels && typeof accountModels === "object") {
-        Object.entries(accountModels).forEach(([name, value]) => {
-          items.push({ name, ...value, lastUsed: account?.lastUsed });
-        });
+
+    // Store raw payload for account switching
+    this.limitsRawPayload = payload;
+
+    // Extract accounts array for multi-account support
+    const accounts = Array.isArray(payload?.accounts) ? payload.accounts : [];
+    this.limitsAccounts = accounts;
+
+    // Determine which accounts to process based on active selection
+    let accountsToProcess = [];
+    if (accounts.length > 0) {
+      if (this.limitsActiveAccountIndex === -1) {
+        // All accounts
+        accountsToProcess = accounts.map((acc, idx) => ({ account: acc, index: idx }));
+      } else if (this.limitsActiveAccountIndex >= 0 && this.limitsActiveAccountIndex < accounts.length) {
+        // Single account
+        accountsToProcess = [{ account: accounts[this.limitsActiveAccountIndex], index: this.limitsActiveAccountIndex }];
       }
     }
 
+    // Process multi-account format
+    if (accountsToProcess.length > 0) {
+      accountsToProcess.forEach(({ account, index }) => {
+        const accountModels = account?.limits || account?.models;
+        const accountEmail = account?.email || account?.id || `Account ${index + 1}`;
+        if (accountModels && typeof accountModels === "object") {
+          Object.entries(accountModels).forEach(([name, value]) => {
+            items.push({
+              name,
+              ...value,
+              lastUsed: account?.lastUsed,
+              accountEmail,
+              accountIndex: index,
+            });
+          });
+        }
+      });
+    }
+
+    // Fallback to single account or legacy format
+    if (!items.length) {
+      if (payload && typeof payload === "object") {
+        const account = Array.isArray(payload.accounts) ? payload.accounts[0] : null;
+        const accountModels = account?.limits || account?.models;
+        if (accountModels && typeof accountModels === "object") {
+          Object.entries(accountModels).forEach(([name, value]) => {
+            items.push({ name, ...value, lastUsed: account?.lastUsed });
+          });
+        }
+      }
+    }
+
+    // Fallback to other legacy formats
     if (!items.length) {
       if (Array.isArray(payload)) {
         payload.forEach((item) => items.push(item));
@@ -1604,6 +1952,8 @@ class ProjectIdeaUI {
           item?.name || item?.model || item?.id || item?.key || ""
         ).trim();
         if (!name) return null;
+        // Filter out models containing "-image"
+        if (name.toLowerCase().includes("-image")) return null;
         const used = Number(
           item?.used ??
             item?.usage ??
@@ -1682,9 +2032,51 @@ class ProjectIdeaUI {
           availablePercent,
           lastUsed,
           resetAt,
+          accountEmail: item?.accountEmail || null,
+          accountIndex: item?.accountIndex ?? null,
         };
       })
       .filter(Boolean);
+  }
+
+  updateAccountSelector() {
+    if (!this.limitsAccountSelector || !this.limitsAccountSelect) return;
+
+    const accounts = this.limitsAccounts;
+    const hasMultipleAccounts = accounts.length > 1;
+
+    // Show/hide account selector
+    this.limitsAccountSelector.classList.toggle("hidden", !hasMultipleAccounts);
+
+    if (!hasMultipleAccounts) return;
+
+    // Update account count
+    if (this.limitsAccountCount) {
+      this.limitsAccountCount.textContent = `${accounts.length} accounts`;
+    }
+
+    // Build options
+    const currentValue = this.limitsAccountSelect.value;
+    this.limitsAccountSelect.innerHTML = "";
+
+    // Add "All accounts" option
+    const allOption = document.createElement("option");
+    allOption.value = "-1";
+    allOption.textContent = "All accounts";
+    this.limitsAccountSelect.appendChild(allOption);
+
+    // Add individual account options
+    accounts.forEach((account, index) => {
+      const option = document.createElement("option");
+      option.value = String(index);
+      const email = account?.email || account?.id || `Account ${index + 1}`;
+      const tier = account?.tier || account?.plan || "";
+      option.textContent = tier ? `${email} (${tier})` : email;
+      this.limitsAccountSelect.appendChild(option);
+    });
+
+    // Restore selection
+    this.limitsAccountSelect.value = currentValue || "-1";
   }
 
   getModelCategory(name) {
@@ -1734,6 +2126,7 @@ class ProjectIdeaUI {
       const payload = await response.json();
       this.limitsModels = this.normalizeLimitsPayload(payload);
       this.limitsHasData = this.limitsModels.length > 0;
+      this.updateAccountSelector();
       this.updateServiceMonitor("alive");
       this.setLimitsLoading(false);
       this.renderLimits();
@@ -1769,12 +2162,19 @@ class ProjectIdeaUI {
       if (active.size === 0) return true;
       return active.has(this.getModelCategory(model.name));
       })
-      .sort((a, b) =>
-        a.name.localeCompare(b.name, undefined, {
+      .sort((a, b) => {
+        // Sort by account first, then by model name
+        const accountA = a.accountEmail || "";
+        const accountB = b.accountEmail || "";
+        const accountCompare = accountA.localeCompare(accountB, undefined, {
+          sensitivity: "base",
+        });
+        if (accountCompare !== 0) return accountCompare;
+        return a.name.localeCompare(b.name, undefined, {
           numeric: true,
           sensitivity: "base",
-        })
-      );
+        });
+      });
 
     const shouldAnimate = !this.limitsHasRendered;
     this.limitsList.innerHTML = "";
@@ -1831,14 +2231,14 @@ class ProjectIdeaUI {
       title.textContent = model.name;
       info.appendChild(title);
 
-      const usage = document.createElement("p");
-      usage.className = "limits-usage";
-      if (available !== null) {
-        usage.textContent = `Available ${available}%`;
-      } else {
-        usage.textContent = "Usage data unavailable";
+      // Add account badge for multi-account "All accounts" view
+      if (model.accountEmail && this.limitsActiveAccountIndex === -1 && this.limitsAccounts.length > 1) {
+        const accountBadge = document.createElement("div");
+        accountBadge.className = "limits-account-badge";
+        accountBadge.textContent = model.accountEmail;
+        accountBadge.setAttribute("title", model.accountEmail);
+        info.appendChild(accountBadge);
       }
-      info.appendChild(usage);
 
       const meta = document.createElement("div");
       meta.className = "limits-meta";
@@ -2634,8 +3034,37 @@ class ProjectIdeaUI {
     this.startUpdateMonitor();
   }
 
+  setUpdateCheckLoading(isLoading) {
+    this.updateCheckInFlight = Boolean(isLoading);
+    if (!this.settingsUpdateNowButton) return;
+    this.settingsUpdateNowButton.disabled = isLoading;
+    this.settingsUpdateNowButton.innerHTML = isLoading
+      ? '<span class="button-loading-indicator"><span></span><span></span><span></span></span>Checking...'
+      : "Check now";
+  }
+
+  queueUpdatePrompt(version) {
+    if (!version) return;
+    this.updatePrompted = true;
+    this.pendingUpdateVersion = String(version);
+    this.flushPendingUpdate();
+  }
+
+  flushPendingUpdate() {
+    if (!this.pendingUpdateVersion) return;
+    const activeDialog = this.getActiveDialog();
+    if (activeDialog && activeDialog !== this.updateDialog) return;
+    const version = this.pendingUpdateVersion;
+    this.pendingUpdateVersion = null;
+    if (!this.openUpdateDialog(version)) {
+      this.pendingUpdateVersion = version;
+    }
+  }
+
   async checkForUpdate({ force = false, showUpToDate = false } = {}) {
+    if (this.updateCheckInFlight) return;
     if (this.updatePrompted && !force) return;
+    this.setUpdateCheckLoading(true);
     try {
       const response = await fetch(`version.json?v=${Date.now()}`, {
         cache: "no-store",
@@ -2652,8 +3081,7 @@ class ProjectIdeaUI {
       }
       const data = await response.json();
       if (data && data.version && data.version !== APP_VERSION) {
-        this.updatePrompted = true;
-        this.openUpdateDialog(data.version);
+        this.queueUpdatePrompt(data.version);
         return;
       }
       if (showUpToDate) {
@@ -2671,7 +3099,326 @@ class ProjectIdeaUI {
           tone: "warning",
         });
       }
+    } finally {
+      this.setUpdateCheckLoading(false);
     }
+  }
+
+  initDataSource() {
+    this.updateDataSourceUI();
+    if (this.dataSource === "localDevice") {
+      this.fileSystemRepo.init().then((hasAccess) => {
+        if (hasAccess) {
+          this.fileSystemRepo.load().then((data) => {
+            const projects = Array.isArray(data?.projects) ? data.projects : [];
+            if (projects.length > 0) {
+              this.applyProjects(projects.map((p) => new Project(p)));
+              this.setSeedState(
+                "localDevice",
+                this.getFileSeedState(data)
+              );
+              this.render();
+              return;
+            }
+            const seedProjects = this.buildSeedProjects();
+            this.applyProjects(seedProjects);
+            this.setSeedState("localDevice", true);
+            this.persistToFile();
+            this.render();
+          });
+        } else {
+          this.dataSource = "localStorage";
+          this.persistUiState();
+          this.updateDataSourceUI();
+          this.pushNotification({
+            title: "File access lost",
+            message: "Switched back to browser storage.",
+            tone: "warning",
+          });
+        }
+      });
+    }
+  }
+
+  updateDataSourceUI() {
+    if (this.dataSourceSelector) {
+      const buttons = this.dataSourceSelector.querySelectorAll("button");
+      buttons.forEach((btn) => {
+        const source = btn.dataset.source;
+        btn.classList.toggle("is-active", source === this.dataSource);
+      });
+      const localDeviceBtn = this.dataSourceSelector.querySelector(
+        '[data-source="localDevice"]'
+      );
+      if (localDeviceBtn && !this.supportsLocalFileAccess()) {
+        localDeviceBtn.disabled = true;
+        localDeviceBtn.title = "Not supported in this browser";
+      }
+      const dbIcon = this.dataSourceSelector.querySelector('[data-icon="database"]');
+      const folderIcon = this.dataSourceSelector.querySelector('[data-icon="folder"]');
+      if (dbIcon) dbIcon.innerHTML = ICONS.database;
+      if (folderIcon) folderIcon.innerHTML = ICONS.folderOpen;
+    }
+    if (this.dataSourceStatus) {
+      const isFile = this.dataSource === "localDevice";
+      this.dataSourceStatus.classList.toggle("is-file", isFile);
+      const statusText = this.dataSourceStatus.querySelector(".status-text");
+      if (statusText) {
+        if (isFile && this.fileSystemRepo.getFileName()) {
+          statusText.textContent = `Using file: ${this.fileSystemRepo.getFileName()}`;
+        } else if (isFile) {
+          statusText.textContent = "Using local file";
+        } else {
+          statusText.textContent = "Using browser localStorage";
+        }
+      }
+    }
+  }
+
+  async switchDataSource(newSource) {
+    if (newSource === this.dataSource) return;
+    if (!this.supportsLocalFileAccess() && newSource === "localDevice") {
+      this.pushNotification({
+        title: "Not supported",
+        message: "Your browser doesn't support local file access.",
+        tone: "warning",
+      });
+      return;
+    }
+
+    if (newSource === "localDevice") {
+      try {
+        const currentSource = this.dataSource;
+        const currentProjects = this.service.getProjects();
+        const shouldPrompt = this.shouldPromptToMigrate(
+          currentSource,
+          currentProjects
+        );
+        const currentIsSeed = this.isSeedDataSource(currentSource);
+        const hasHandle = await this.fileSystemRepo.init();
+        if (!hasHandle) {
+          await this.fileSystemRepo.selectStorageLocation();
+        }
+
+        const fileData = await this.fileSystemRepo.load();
+        const fileProjects = Array.isArray(fileData?.projects)
+          ? fileData.projects
+          : [];
+        const fileHasData = fileProjects.length > 0;
+        const currentHasData = currentProjects.length > 0;
+
+        if (fileHasData && currentHasData) {
+          if (currentIsSeed) {
+            this.applyProjects(fileProjects.map((p) => new Project(p)));
+            this.setSeedState(
+              "localDevice",
+              this.getFileSeedState(fileData),
+              { skipPersist: true }
+            );
+          } else {
+            const strategy = await this.showDataSourceDialog();
+            if (strategy === "cancel") {
+              this.updateDataSourceUI();
+              return;
+            }
+            if (strategy === "overwrite") {
+              this.applyProjects(fileProjects.map((p) => new Project(p)));
+              this.setSeedState(
+                "localDevice",
+                this.getFileSeedState(fileData),
+                { skipPersist: true }
+              );
+            } else {
+              const merged = this.mergeProjects(
+                currentProjects,
+                fileProjects.map((p) => new Project(p))
+              );
+              this.applyProjects(merged);
+              this.setSeedState("localDevice", false, { skipPersist: true });
+            }
+          }
+        } else if (fileHasData) {
+          this.applyProjects(fileProjects.map((p) => new Project(p)));
+          this.setSeedState(
+            "localDevice",
+            this.getFileSeedState(fileData),
+            { skipPersist: true }
+          );
+        } else {
+          if (shouldPrompt) {
+            const shouldMove = await this.confirmAction({
+              title: "Move data to local file?",
+              message:
+                "Your current workspace has custom data. Move it to the local file, or start the file with sample data.",
+              confirmText: "Move data",
+            });
+            if (shouldMove) {
+              this.setSeedState("localDevice", false, { skipPersist: true });
+            } else {
+              const seedProjects = this.buildSeedProjects();
+              this.applyProjects(seedProjects);
+              this.setSeedState("localDevice", true, { skipPersist: true });
+            }
+          } else {
+            const seedProjects = this.buildSeedProjects();
+            this.applyProjects(seedProjects);
+            this.setSeedState("localDevice", true, { skipPersist: true });
+          }
+        }
+
+        this.dataSource = "localDevice";
+        await this.persistToFile();
+        this.persistUiState();
+        this.updateDataSourceUI();
+        this.render();
+        this.pushNotification({
+          title: "Data source changed",
+          message: `Now using: ${this.fileSystemRepo.getFileName()}`,
+          tone: "success",
+        });
+      } catch (e) {
+        if (e.name !== "AbortError") {
+          this.pushNotification({
+            title: "Error",
+            message: e.message,
+            tone: "warning",
+          });
+        }
+        this.updateDataSourceUI();
+      }
+    } else {
+      const currentSource = this.dataSource;
+      const currentProjects = this.service.getProjects();
+      const shouldPrompt = this.shouldPromptToMigrate(
+        currentSource,
+        currentProjects
+      );
+      if (shouldPrompt) {
+        const shouldMove = await this.confirmAction({
+          title: "Move data to browser storage?",
+          message:
+            "Move the local file data into browser storage? Cancel to stay on the local file.",
+          confirmText: "Move data",
+        });
+        if (!shouldMove) {
+          this.updateDataSourceUI();
+          return;
+        }
+        this.setSeedState("localStorage", false, { skipPersist: true });
+        this.service.persist();
+      } else {
+        this.setSeedState("localStorage", this.isSeedDataSource(currentSource), {
+          skipPersist: true,
+        });
+        this.service.persist();
+      }
+      this.dataSource = "localStorage";
+      this.persistUiState();
+      this.updateDataSourceUI();
+      this.render();
+      this.pushNotification({
+        title: "Data source changed",
+        message: "Now using browser localStorage.",
+        tone: "success",
+      });
+    }
+  }
+
+  showDataSourceDialog() {
+    return new Promise((resolve) => {
+      if (!this.dataSourceDialog) {
+        resolve("overwrite");
+        return;
+      }
+      this.dataSourcePendingStrategy = resolve;
+      this.dataSourceDialog.showModal();
+    });
+  }
+
+  async applyMergeStrategy(fileData, strategy) {
+    if (strategy === "overwrite") {
+      this.service.projects = fileData.projects.map((p) => new Project(p));
+    } else if (strategy === "merge") {
+      this.service.projects = this.mergeProjects(
+        this.service.projects,
+        fileData.projects.map((p) => new Project(p))
+      );
+    }
+  }
+
+  mergeProjects(currentProjects, newProjects) {
+    const merged = [...currentProjects];
+    const projectMap = new Map(merged.map((p) => [p.id, p]));
+
+    for (const newProject of newProjects) {
+      const existing = projectMap.get(newProject.id);
+      if (!existing) {
+        merged.push(newProject);
+        projectMap.set(newProject.id, newProject);
+      } else {
+        const ideaMap = new Map(existing.ideas.map((i) => [i.id, i]));
+        for (const newIdea of newProject.ideas) {
+          if (!ideaMap.has(newIdea.id)) {
+            existing.ideas.push(newIdea);
+          } else {
+            const existingIdea = ideaMap.get(newIdea.id);
+            const existingTime = Math.max(
+              existingIdea.createdAt || 0,
+              existingIdea.finishedAt || 0
+            );
+            const newTime = Math.max(
+              newIdea.createdAt || 0,
+              newIdea.finishedAt || 0
+            );
+            if (newTime > existingTime) {
+              Object.assign(existingIdea, newIdea);
+            }
+          }
+        }
+      }
+    }
+    return merged;
+  }
+
+  async persistToFile() {
+    if (this.dataSource !== "localDevice" || !this.fileSystemRepo.fileHandle) {
+      return;
+    }
+    try {
+      const payload = this.buildFilePayload(this.service.projects, {
+        seed: this.isSeedDataSource("localDevice"),
+      });
+      await this.fileSystemRepo.save(payload);
+    } catch (error) {
+      console.warn("Failed to persist to file", error);
+      this.pushNotification({
+        title: "Save failed",
+        message: "Could not write to file. Data saved to browser storage.",
+        tone: "warning",
+      });
+      this.dataSource = "localStorage";
+      this.service.persist();
+      this.persistUiState();
+      this.updateDataSourceUI();
+    }
+  }
+
+  resetAllData() {
+    this.service.projects = this.buildSeedProjects();
+    this.service.persist();
+    this.setSeedState(this.dataSource, true, { skipPersist: true });
+    if (this.dataSource === "localDevice") {
+      this.persistToFile();
+    }
+    this.activeProjectId = this.service.projects[0]?.id || null;
+    this.persistUiState();
+    this.closeSettingsDialog();
+    this.render();
+    this.pushNotification({
+      title: "Data reset",
+      message: "Workspace has been reset with sample data.",
+      tone: "neutral",
+    });
   }
 
   initServiceMonitor() {
@@ -2913,6 +3660,7 @@ class ProjectIdeaUI {
     this.dialogs.forEach((dialog) => {
       dialog.addEventListener("close", () => {
         this.syncNotifyLayer();
+        this.flushPendingUpdate();
       });
     });
 
@@ -3242,9 +3990,14 @@ class ProjectIdeaUI {
       reader.onload = () => {
         try {
           const payload = JSON.parse(reader.result);
+          const fileName = this.fileSystemRepo.getFileName();
+          const importMessage =
+            this.dataSource === "localDevice"
+              ? `Importing will replace all current projects and overwrite ${fileName || "your local file"}. Continue?`
+              : "Importing will replace all current projects and ideas. Continue?";
           this.openConfirmDialog({
             title: "Import data",
-            message: "Importing will replace all current projects and ideas. Continue?",
+            message: importMessage,
             confirmText: "Import data",
             onConfirm: () => {
               this.applyImport(payload);
@@ -3444,7 +4197,7 @@ class ProjectIdeaUI {
       if (this.pendingConfirm) {
         this.pendingConfirm();
       }
-      this.closeConfirmDialog();
+      this.closeConfirmDialog({ wasConfirmed: true });
     });
 
     this.confirmCancel.addEventListener("click", () => {
@@ -3455,6 +4208,10 @@ class ProjectIdeaUI {
       if (event.target === this.confirmDialog) {
         this.closeConfirmDialog();
       }
+    });
+    this.confirmDialog.addEventListener("cancel", (event) => {
+      event.preventDefault();
+      this.closeConfirmDialog();
     });
 
     this.updateForm?.addEventListener("submit", (event) => {
@@ -3494,6 +4251,14 @@ class ProjectIdeaUI {
       input.addEventListener("change", () => {
         this.renderLimits();
       });
+    });
+
+    this.limitsAccountSelect?.addEventListener("change", () => {
+      this.limitsActiveAccountIndex = parseInt(this.limitsAccountSelect.value, 10);
+      if (this.limitsRawPayload) {
+        this.limitsModels = this.normalizeLimitsPayload(this.limitsRawPayload);
+        this.renderLimits();
+      }
     });
 
     this.settingsClose?.addEventListener("click", () => {
@@ -3568,6 +4333,56 @@ class ProjectIdeaUI {
         this.applyThemePreference(target.value);
         this.syncSettingsState();
       });
+    });
+
+    this.dataSourceSelector?.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-source]");
+      if (!button || button.disabled) return;
+      const source = button.dataset.source;
+      if (source) {
+        this.switchDataSource(source);
+      }
+    });
+
+    this.settingsResetData?.addEventListener("click", () => {
+      this.openConfirmDialog({
+        title: "Reset all data",
+        message:
+          "This will permanently delete all projects and ideas. This action cannot be undone.",
+        confirmText: "Reset",
+        onConfirm: () => {
+          this.resetAllData();
+        },
+      });
+    });
+
+    this.dataSourceForm?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const formData = new FormData(event.target);
+      const strategy = formData.get("mergeStrategy") || "overwrite";
+      if (this.dataSourcePendingStrategy) {
+        this.dataSourcePendingStrategy(strategy);
+        this.dataSourcePendingStrategy = null;
+      }
+      this.dataSourceDialog?.close();
+    });
+
+    this.dataSourceCancel?.addEventListener("click", () => {
+      if (this.dataSourcePendingStrategy) {
+        this.dataSourcePendingStrategy("cancel");
+        this.dataSourcePendingStrategy = null;
+      }
+      this.dataSourceDialog?.close();
+    });
+
+    this.dataSourceDialog?.addEventListener("click", (event) => {
+      if (event.target === this.dataSourceDialog) {
+        if (this.dataSourcePendingStrategy) {
+          this.dataSourcePendingStrategy("cancel");
+          this.dataSourcePendingStrategy = null;
+        }
+        this.dataSourceDialog.close();
+      }
     });
 
     this.initStickyTopbar();
@@ -3724,14 +4539,18 @@ class ProjectIdeaUI {
   }
 
   openUpdateDialog(version) {
-    if (!this.updateDialog) return;
+    if (!this.updateDialog) return false;
     const message = "A new version is available. Refresh to update.";
     if (this.updateMessage) {
       this.updateMessage.textContent = message;
     }
+    const activeDialog = this.getActiveDialog();
+    if (activeDialog && activeDialog !== this.updateDialog) {
+      return false;
+    }
     if (this.updateDialog.open || this.updateDialog.hasAttribute("open")) {
       this.syncNotifyLayer();
-      return;
+      return true;
     }
     if (typeof this.updateDialog.showModal === "function") {
       this.updateDialog.showModal();
@@ -3739,6 +4558,7 @@ class ProjectIdeaUI {
       this.updateDialog.setAttribute("open", "true");
     }
     this.syncNotifyLayer();
+    return true;
   }
 
   closeUpdateDialog() {
@@ -3751,11 +4571,24 @@ class ProjectIdeaUI {
     this.syncNotifyLayer();
   }
 
-  openConfirmDialog({ title, message, confirmText, onConfirm }) {
+  confirmAction({ title, message, confirmText }) {
+    return new Promise((resolve) => {
+      this.openConfirmDialog({
+        title,
+        message,
+        confirmText,
+        onConfirm: () => resolve(true),
+        onCancel: () => resolve(false),
+      });
+    });
+  }
+
+  openConfirmDialog({ title, message, confirmText, onConfirm, onCancel }) {
     this.confirmTitle.textContent = title;
     this.confirmMessage.textContent = message;
     this.confirmConfirm.textContent = confirmText || "Delete";
     this.pendingConfirm = onConfirm;
+    this.pendingConfirmCancel = onCancel;
 
     if (typeof this.confirmDialog.showModal === "function") {
       this.confirmDialog.showModal();
@@ -3765,13 +4598,17 @@ class ProjectIdeaUI {
     this.syncNotifyLayer();
   }
 
-  closeConfirmDialog() {
+  closeConfirmDialog({ wasConfirmed = false } = {}) {
     if (this.confirmDialog.open) {
       this.confirmDialog.close();
     } else {
       this.confirmDialog.removeAttribute("open");
     }
+    if (!wasConfirmed && this.pendingConfirmCancel) {
+      this.pendingConfirmCancel();
+    }
     this.pendingConfirm = null;
+    this.pendingConfirmCancel = null;
     this.confirmTitle.textContent = "Delete";
     this.confirmMessage.textContent = "";
     this.confirmConfirm.textContent = "Delete";
@@ -3861,6 +4698,9 @@ class ProjectIdeaUI {
     this.renderProjects();
     this.renderIdeas();
     this.renderLog();
+    if (this.dataSource === "localDevice") {
+      this.persistToFile();
+    }
   }
 
   renderProjects() {
