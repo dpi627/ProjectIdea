@@ -2140,7 +2140,8 @@ button:hover {
 }
 
 @media (max-width: 1100px) {
-  .workspace {
+  .workspace,
+  .workspace.log-hidden {
     grid-template-columns: 1fr;
   }
 
