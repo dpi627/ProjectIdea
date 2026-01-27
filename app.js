@@ -2,14 +2,21 @@ const STORAGE_KEY = "project-idea-collection.v1";
 const THEME_KEY = "project-idea-collection.theme";
 const UI_STATE_KEY = "project-idea-collection.ui";
 const LOCAL_FILE_NAME = "project-ideas.json";
-const APP_VERSION = "20260127112048";
+const APP_VERSION = "20260127131330";
 const DEFAULT_UPDATE_CHECK_INTERVAL_MS = 60_000;
 const MIN_UPDATE_CHECK_INTERVAL_MS = 10_000;
 const MAX_UPDATE_CHECK_INTERVAL_MS = 3_600_000;
 const CHART_JS_SRC =
   "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js";
-const HIGHLIGHT_JS_SRC =
-  "https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/common.min.js";
+const PRISM_VERSION = "1.29.0";
+const PRISM_THEME_HREF =
+  `https://cdn.jsdelivr.net/npm/prismjs@${PRISM_VERSION}/themes/prism-tomorrow.min.css`;
+const PRISM_CORE_SRC =
+  `https://cdn.jsdelivr.net/npm/prismjs@${PRISM_VERSION}/components/prism-core.min.js`;
+const PRISM_CLIKE_SRC =
+  `https://cdn.jsdelivr.net/npm/prismjs@${PRISM_VERSION}/components/prism-clike.min.js`;
+const PRISM_JAVASCRIPT_SRC =
+  `https://cdn.jsdelivr.net/npm/prismjs@${PRISM_VERSION}/components/prism-javascript.min.js`;
 const GANTT_CATEGORY_OPTIONS = ["CI", "MP", "SP"];
 
 const createId = () => {
@@ -1307,7 +1314,7 @@ class ProjectIdeaUI {
     this.logPieChartInstance = null;
     this.logChartNoteBase = this.logChartNote?.textContent || "";
     this.chartJsPromise = null;
-    this.highlightJsPromise = null;
+    this.prismPromise = null;
     this.techTopics = this.buildTechTopics();
     this.techTopicCache = new Map();
     this.techActiveTopicId = this.resolveTechTopicId(uiState.techActiveTopicId);
@@ -2012,6 +2019,8 @@ class ProjectIdeaUI {
 
   openTechDialog(topicId = null) {
     if (!this.techDialog) return;
+    // Warm up Prism.js in parallel with rendering to reduce perceived latency.
+    this.ensurePrism();
     this.renderTechCatalog();
     const targetId = this.resolveTechTopicId(topicId || this.techActiveTopicId);
     this.setTechTopic(targetId, { force: true });
@@ -2033,34 +2042,97 @@ class ProjectIdeaUI {
     this.syncNotifyLayer();
   }
 
-  ensureHighlightJs() {
-    if (typeof window.hljs !== "undefined") {
-      return Promise.resolve(true);
-    }
-    if (this.highlightJsPromise) {
-      return this.highlightJsPromise;
-    }
-    this.highlightJsPromise = new Promise((resolve) => {
+  ensurePrismTheme() {
+    const existing = document.querySelector(
+      `link[data-prism-theme="${PRISM_THEME_HREF}"]`
+    );
+    if (existing) return;
+    const link = document.createElement("link");
+    link.rel = "preload";
+    link.as = "style";
+    link.href = PRISM_THEME_HREF;
+    link.dataset.prismTheme = PRISM_THEME_HREF;
+    const applyStylesheet = () => {
+      if (link.rel !== "stylesheet") {
+        link.rel = "stylesheet";
+      }
+    };
+    link.onload = applyStylesheet;
+    link.onerror = applyStylesheet;
+    // Fallback for browsers that ignore rel=preload for styles.
+    window.setTimeout(applyStylesheet, 1500);
+    document.head.appendChild(link);
+  }
+
+  loadPrismScript(src) {
+    return new Promise((resolve, reject) => {
+      const existing = document.querySelector(`script[src="${src}"]`);
+      if (existing) {
+        if (
+          existing.dataset.loaded === "true" ||
+          existing.readyState === "complete" ||
+          existing.readyState === "loaded"
+        ) {
+          existing.dataset.loaded = "true";
+          resolve(true);
+        } else {
+          existing.addEventListener("load", () => resolve(true), {
+            once: true,
+          });
+          existing.addEventListener("error", () => reject(new Error(src)), {
+            once: true,
+          });
+        }
+        return;
+      }
       const script = document.createElement("script");
-      script.src = HIGHLIGHT_JS_SRC;
+      script.src = src;
       script.async = true;
-      script.onload = () => resolve(true);
-      script.onerror = () => {
-        this.highlightJsPromise = null;
-        resolve(false);
+      script.onload = () => {
+        script.dataset.loaded = "true";
+        resolve(true);
       };
+      script.onerror = () => reject(new Error(src));
       document.head.appendChild(script);
     });
-    return this.highlightJsPromise;
+  }
+
+  ensurePrism() {
+    if (
+      typeof window.Prism !== "undefined" &&
+      window.Prism.languages?.javascript
+    ) {
+      return Promise.resolve(true);
+    }
+    if (this.prismPromise) {
+      return this.prismPromise;
+    }
+    this.ensurePrismTheme();
+    // Disable Prism's auto-run; we highlight on-demand after injecting HTML.
+    window.Prism = window.Prism || {};
+    window.Prism.manual = true;
+    this.prismPromise = this.loadPrismScript(PRISM_CORE_SRC)
+      .then(() => this.loadPrismScript(PRISM_CLIKE_SRC))
+      .then(() => this.loadPrismScript(PRISM_JAVASCRIPT_SRC))
+      .then(() => true)
+      .catch(() => {
+        this.prismPromise = null;
+        return false;
+      });
+    return this.prismPromise;
   }
 
   highlightTechCode() {
     if (!this.techContent) return;
-    this.ensureHighlightJs().then((loaded) => {
-      if (!loaded || typeof window.hljs === "undefined") return;
-      const blocks = this.techContent.querySelectorAll("pre code");
+    this.ensurePrism().then((loaded) => {
+      if (!loaded || typeof window.Prism === "undefined") return;
+      const blocks = this.techContent.querySelectorAll(
+        'pre code[class*="language-"]'
+      );
       blocks.forEach((block) => {
-        window.hljs.highlightElement(block);
+        if (block.dataset.prismHighlighted === "true") return;
+        window.Prism.highlightElement(block);
+        block.dataset.prismHighlighted = "true";
       });
     });
   }
