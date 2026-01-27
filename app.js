@@ -2,12 +2,14 @@ const STORAGE_KEY = "project-idea-collection.v1";
 const THEME_KEY = "project-idea-collection.theme";
 const UI_STATE_KEY = "project-idea-collection.ui";
 const LOCAL_FILE_NAME = "project-ideas.json";
-const APP_VERSION = "20260124173038";
+const APP_VERSION = "20260127112048";
 const DEFAULT_UPDATE_CHECK_INTERVAL_MS = 60_000;
 const MIN_UPDATE_CHECK_INTERVAL_MS = 10_000;
 const MAX_UPDATE_CHECK_INTERVAL_MS = 3_600_000;
 const CHART_JS_SRC =
   "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js";
+const HIGHLIGHT_JS_SRC =
+  "https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/common.min.js";
 const GANTT_CATEGORY_OPTIONS = ["CI", "MP", "SP"];
 
 const createId = () => {
@@ -203,6 +205,17 @@ const ICONS = {
       <path d="M3 18h5" />
     </svg>
   `,
+  tech: `
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M4 4.5A2.5 2.5 0 0 1 6.5 7H20" />
+      <path d="M20 3v18" />
+      <path d="M6.5 7h10.5" />
+      <path d="M6.5 17h10.5" />
+      <path d="M9 10l-2 2 2 2" />
+      <path d="M13 10l2 2-2 2" />
+    </svg>
+  `,
   database: `
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <ellipse cx="12" cy="5" rx="9" ry="3" />
@@ -216,6 +229,238 @@ const ICONS = {
       <path d="M2 10h20" />
     </svg>
   `,
+};
+
+const TECH_SNIPPETS = {
+  escapeHtml: String.raw`const escapeHtml = (value) =>
+  value.replace(/[&<>"']/g, (char) => {
+    const map = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "\"": "&quot;",
+      "'": "&#39;",
+    };
+    return map[char] || char;
+  });`,
+  domainModel: String.raw`class Idea {
+  constructor({
+    id = createId(),
+    text,
+    done = false,
+    createdAt = Date.now(),
+    finishedAt = null,
+  }) {
+    this.id = id;
+    this.text = text;
+    this.done = done;
+    this.createdAt = createdAt;
+    this.finishedAt = finishedAt;
+  }
+}
+
+class Project {
+  constructor({ id = createId(), name, description = "", startDate = null, dueDate = null, category = null, ideas = [] }) {
+    this.id = id;
+    this.name = name;
+    this.description = description;
+    this.startDate = startDate;
+    this.dueDate = dueDate;
+    this.category = category;
+    this.ideas = ideas.map((idea) => new Idea(idea));
+  }
+
+  stats() {
+    const total = this.ideas.length;
+    const done = this.ideas.filter((idea) => idea.done).length;
+    const percent = total === 0 ? 0 : Math.round((done / total) * 100);
+    return { total, done, percent };
+  }
+}`,
+  localStorageRepo: String.raw`class LocalStorageProjectRepository {
+  constructor(storageKey) {
+    this.storageKey = storageKey;
+  }
+
+  load() {
+    const raw = localStorage.getItem(this.storageKey);
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed.map((project) => new Project(project));
+    } catch (error) {
+      console.warn("Failed to parse stored data", error);
+      return [];
+    }
+  }
+
+  save(projects) {
+    const payload = serializeProjects(projects);
+    localStorage.setItem(this.storageKey, JSON.stringify(payload));
+  }
+}`,
+  fileSystemRepo: String.raw`async openDatabase() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(this.DB_NAME, 1);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains(this.DB_STORE)) {
+        db.createObjectStore(this.DB_STORE);
+      }
+    };
+  });
+}
+
+async saveFileHandle(handle) {
+  const db = await this.openDatabase();
+  const tx = db.transaction(this.DB_STORE, "readwrite");
+  tx.objectStore(this.DB_STORE).put(handle, "currentFile");
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}`,
+  toggleIdea: String.raw`toggleIdea(projectId, ideaId) {
+  const project = this.findProject(projectId);
+  const index = project.ideas.findIndex((item) => item.id === ideaId);
+  if (index === -1) throw new Error("Idea not found");
+  const [idea] = project.ideas.splice(index, 1);
+  idea.done = !idea.done;
+  idea.finishedAt = idea.done ? new Date().toISOString() : null;
+  if (idea.done) {
+    project.ideas.push(idea);
+  } else {
+    project.ideas.unshift(idea);
+  }
+  this.repository.save(this.projects);
+  this.notifyChange();
+}`,
+  mergeProjects: String.raw`mergeProjects(currentProjects, newProjects) {
+  const merged = [...currentProjects];
+  const projectMap = new Map(merged.map((p) => [p.id, p]));
+
+  for (const newProject of newProjects) {
+    const existing = projectMap.get(newProject.id);
+    if (!existing) {
+      merged.push(newProject);
+      projectMap.set(newProject.id, newProject);
+      continue;
+    }
+    const ideaMap = new Map(existing.ideas.map((i) => [i.id, i]));
+    for (const newIdea of newProject.ideas) {
+      if (!ideaMap.has(newIdea.id)) {
+        existing.ideas.push(newIdea);
+        continue;
+      }
+      const existingIdea = ideaMap.get(newIdea.id);
+      const existingTime = Math.max(
+        existingIdea.createdAt || 0,
+        existingIdea.finishedAt || 0
+      );
+      const newTime = Math.max(
+        newIdea.createdAt || 0,
+        newIdea.finishedAt || 0
+      );
+      if (newTime > existingTime) {
+        Object.assign(existingIdea, newIdea);
+      }
+    }
+  }
+  return merged;
+}`,
+  ensureChartJs: String.raw`ensureChartJs() {
+  if (typeof Chart !== "undefined") {
+    return Promise.resolve(true);
+  }
+  if (this.chartJsPromise) {
+    return this.chartJsPromise;
+  }
+  this.chartJsPromise = new Promise((resolve) => {
+    const script = document.createElement("script");
+    script.src = CHART_JS_SRC;
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => {
+      this.chartJsPromise = null;
+      resolve(false);
+    };
+    document.head.appendChild(script);
+  });
+  return this.chartJsPromise;
+}`,
+  ganttProject: String.raw`renderGanttProject(project, rangeStart, rangeEnd) {
+  const stats = project.stats();
+  const projectStart = new Date(project.startDate);
+  const projectEnd = new Date(project.dueDate);
+  const totalRange = rangeEnd - rangeStart;
+  const leftPercent = Math.max(0, (projectStart - rangeStart) / totalRange * 100);
+  const rightPercent = Math.min(100, (projectEnd - rangeStart) / totalRange * 100);
+  const widthPercent = Math.max(0, rightPercent - leftPercent);
+
+  return \`
+    <div class="gantt-project" data-project-id="\${project.id}">
+      <div class="gantt-project-header" style="left: \${leftPercent}%; min-width: \${widthPercent}%;">
+        <div class="gantt-project-label">
+          <span class="gantt-project-name">\${escapeHtml(project.name)}</span>
+        </div>
+        <div class="gantt-project-actions">
+          <span class="gantt-project-stats">\${stats.done}/\${stats.total} · \${stats.percent}%</span>
+        </div>
+      </div>
+      <div class="gantt-bar" style="left: \${leftPercent}%; width: \${widthPercent}%;">
+        <div class="gantt-bar-progress" style="--progress: \${stats.percent}%;"></div>
+      </div>
+    </div>
+  \`;
+}`,
+  checkForUpdate: String.raw`async checkForUpdate({ force = false } = {}) {
+  if (this.updateCheckInFlight) return;
+  if (this.updatePrompted && !force) return;
+  this.setUpdateCheckLoading(true);
+  try {
+    const response = await fetch(\`version.json?v=\${Date.now()}\`, {
+      cache: "no-store",
+    });
+    if (!response.ok) return;
+    const data = await response.json();
+    if (data?.version && data.version !== APP_VERSION) {
+      this.queueUpdatePrompt(data.version);
+    }
+  } finally {
+    this.setUpdateCheckLoading(false);
+  }
+}`,
+  themeApply: String.raw`applyThemePreference(preference) {
+  const next =
+    preference === "dark" || preference === "light" || preference === "system"
+      ? preference
+      : "system";
+  this.preference = next;
+  const resolved = this.resolveTheme(next);
+  document.documentElement.dataset.theme = resolved;
+  localStorage.setItem(this.storageKey, next);
+  return resolved;
+}`,
+  serviceMonitor: String.raw`const controller = new AbortController();
+const timeoutId = window.setTimeout(
+  () => controller.abort(),
+  this.serviceMonitorTimeoutMs
+);
+try {
+  const response = await fetch(this.serviceMonitorUrl, {
+    method: "GET",
+    mode: "no-cors",
+    signal: controller.signal,
+  });
+  const alive = Boolean(response);
+  this.updateServiceMonitor(alive ? "alive" : "offline");
+} catch (error) {
+  this.updateServiceMonitor("offline");
+} finally {
+  window.clearTimeout(timeoutId);
+}`,
 };
 
 // Domain layer
@@ -915,6 +1160,7 @@ class ProjectIdeaUI {
     this.progressLabel = document.getElementById("progressLabel");
     this.projectDescription = document.getElementById("projectDescription");
     this.themeToggle = document.getElementById("themeToggle");
+    this.techToggle = document.getElementById("techToggle");
     this.settingsToggle = document.getElementById("settingsToggle");
     this.exportButton = document.getElementById("exportData");
     this.importButton = document.getElementById("importData");
@@ -924,6 +1170,7 @@ class ProjectIdeaUI {
     this.workspace = document.querySelector(".workspace");
     this.topbar = document.querySelector(".topbar");
     this.topbarSpacer = document.getElementById("topbarSpacer");
+    this.ideasPanel = document.querySelector(".ideas-panel");
     this.topbarStickyThreshold = 0;
     this.isTopbarSticky = false;
     this.logPanel = document.querySelector(".log-panel");
@@ -999,6 +1246,10 @@ class ProjectIdeaUI {
     this.ganttCategoryFilter = new Set(GANTT_CATEGORY_OPTIONS);
     this.ganttClose = document.getElementById("ganttClose");
     this.ganttActionFrame = null;
+    this.techDialog = document.getElementById("techDialog");
+    this.techClose = document.getElementById("techClose");
+    this.techContent = document.getElementById("techContent");
+    this.techCatalog = document.getElementById("techCatalog");
     this.dialogs = Array.from(document.querySelectorAll("dialog"));
 
     this.ideaForm = document.getElementById("ideaForm");
@@ -1056,6 +1307,12 @@ class ProjectIdeaUI {
     this.logPieChartInstance = null;
     this.logChartNoteBase = this.logChartNote?.textContent || "";
     this.chartJsPromise = null;
+    this.highlightJsPromise = null;
+    this.techTopics = this.buildTechTopics();
+    this.techTopicCache = new Map();
+    this.techActiveTopicId = this.resolveTechTopicId(uiState.techActiveTopicId);
+    this.techSwitchTimer = null;
+    this.techCatalogBound = false;
     this.limitsModels = [];
     this.limitsCharts = new Map();
     this.limitsRefreshMs = 30000;
@@ -1204,6 +1461,16 @@ class ProjectIdeaUI {
     return allowed.includes(filter) ? filter : "todo";
   }
 
+  resolveTechTopicId(topicId) {
+    if (!Array.isArray(this.techTopics) || this.techTopics.length === 0) {
+      return null;
+    }
+    const fallback = this.techTopics[0].id;
+    if (!topicId) return fallback;
+    const matches = this.techTopics.some((topic) => topic.id === topicId);
+    return matches ? topicId : fallback;
+  }
+
   getUiState() {
     return {
       activeProjectId: this.activeProjectId,
@@ -1217,6 +1484,7 @@ class ProjectIdeaUI {
       modelUsageUrl: this.modelUsageUrl,
       dataSource: this.dataSource,
       seedState: this.seedState,
+      techActiveTopicId: this.techActiveTopicId,
     };
   }
 
@@ -1404,6 +1672,397 @@ class ProjectIdeaUI {
     }
     this.updateProxyToggle(this.serviceMonitorEnabled);
     this.updateIdeaToggle(this.copyWithUltrathink);
+  }
+
+  buildTechTopics() {
+    const storageKey = escapeHtml(STORAGE_KEY);
+    const themeKey = escapeHtml(THEME_KEY);
+    const uiKey = escapeHtml(UI_STATE_KEY);
+    const version = escapeHtml(APP_VERSION);
+    const healthUrl = escapeHtml(this.normalizeProxyUrl(""));
+    const usageUrl = escapeHtml(this.normalizeModelUsageUrl(""));
+
+    const inline = (text) => `<span class="tech-inline-code">${text}</span>`;
+    const codeBlock = (code, language = "javascript") =>
+      `
+        <pre><code class="language-${language}">${escapeHtml(code)}</code></pre>
+      `;
+    const section = ({ title, body = "", points = [], code = "", language }) => {
+      const pointsHtml = points.length
+        ? `<ul class="tech-points">${points.map((item) => `<li>${item}</li>`).join("")}</ul>`
+        : "";
+      const codeHtml = code ? codeBlock(code, language) : "";
+      return `
+        <section class="tech-section">
+          <h4>${title}</h4>
+          ${body ? `<p>${body}</p>` : ""}
+          ${pointsHtml}
+          ${codeHtml}
+        </section>
+      `;
+    };
+    const callout = (title, note) => `
+      <div class="tech-callout">
+        <strong>${title}</strong>
+        <span>${note}</span>
+      </div>
+    `;
+    const topic = ({ id, title, subtitle, sections }) => ({
+      id,
+      title,
+      subtitle,
+      render: () => `
+        <article class="tech-topic" data-tech-topic="${escapeHtml(id)}">
+          <header class="tech-topic-header">
+            <h3 class="tech-topic-title">${title}</h3>
+            <p class="tech-topic-subtitle">${subtitle}</p>
+          </header>
+          ${sections.join("")}
+        </article>
+      `,
+    });
+
+    return [
+      topic({
+        id: "architecture",
+        title: "架構分層（單檔但分層清楚）",
+        subtitle:
+          `核心邏輯集中在 ${inline("app.js")}，但用 class 將 Domain / Data / Use Case / UI / Visual utilities 分開，維持可讀性與維護性。`,
+        sections: [
+          section({
+            title: "分層對照表",
+            points: [
+              `${inline("Idea")} / ${inline("Project")}: Domain 資料模型`,
+              `${inline("LocalStorageProjectRepository")} / ${inline("FileSystemDataRepository")}: 資料存取`,
+              `${inline("ProjectService")}: 用例與商業規則`,
+              `${inline("ProjectIdeaUI")}: DOM 組裝、事件、畫面`,
+              `${inline("ThemeService")} / ${inline("PolyBackground")}: 視覺與主題`,
+            ],
+          }),
+          callout("關鍵技術點", "沒有框架也能用分層思維，降低「所有邏輯攪在一起」的風險。"),
+          section({
+            title: "Domain 模型與統計計算",
+            body:
+              "進度百分比不是存表，而是由當下 ideas 狀態即時計算，避免一致性問題。",
+            code: TECH_SNIPPETS.domainModel,
+          }),
+        ],
+      }),
+      topic({
+        id: "data-flow",
+        title: "資料流與狀態更新",
+        subtitle:
+          `所有變更會回到 ${inline("ProjectService")} 內完成，最後統一 ${inline("repository.save")} 並觸發 ${inline("notifyChange")}。`,
+        sections: [
+          section({
+            title: "完成 / 取消完成的排序策略",
+            body:
+              "切換完成狀態時，同步更新 finishedAt，並把完成項目移到尾端、未完成移到前端，讓清單自然分群。",
+            code: TECH_SNIPPETS.toggleIdea,
+          }),
+          callout("關鍵技術點", "用「行為即排序」的規則，減少 UI 額外排序邏輯。"),
+        ],
+      }),
+      topic({
+        id: "storage",
+        title: "儲存策略與 LocalStorage Keys",
+        subtitle:
+          `資料預設存在瀏覽器端（無後端、無登入）。Key 命名清楚且分工明確。`,
+        sections: [
+          section({
+            title: "三個主要儲存 key",
+            points: [
+              `${inline(storageKey)}: 專案與 ideas 主資料`,
+              `${inline(themeKey)}: 主題偏好（system / light / dark）`,
+              `${inline(uiKey)}: UI 狀態（篩選、資料來源、更新頻率等）`,
+            ],
+          }),
+          section({
+            title: "LocalStorage Repository（純粹、可替換）",
+            body:
+              "Repository 只負責 load/save；資料規則都放在 service 層，避免資料層過度膨脹。",
+            code: TECH_SNIPPETS.localStorageRepo,
+          }),
+        ],
+      }),
+      topic({
+        id: "data-source",
+        title: "資料來源切換（LocalStorage ↔ Local File）",
+        subtitle:
+          `透過 File System Access API + IndexedDB 快取檔案 handle，支援真正的本機檔案儲存與資料遷移策略。`,
+        sections: [
+          section({
+            title: "檔案 handle 的 IndexedDB 快取",
+            body:
+              "用 IndexedDB 存 handle，重整後可嘗試恢復檔案存取權限，避免每次都重新挑檔案。",
+            code: TECH_SNIPPETS.fileSystemRepo,
+          }),
+          section({
+            title: "合併策略（以時間戳為準）",
+            body:
+              "當雙方都有資料時可選 merge。衝突以較新的 createdAt / finishedAt 覆蓋，降低資料遺失風險。",
+            code: TECH_SNIPPETS.mergeProjects,
+          }),
+          callout(
+            "實務提醒",
+            "File System Access API 在 file:// 來源可能受限，建議使用 python -m http.server。"
+          ),
+        ],
+      }),
+      topic({
+        id: "log-analytics",
+        title: "完成紀錄與分析圖表（Chart.js Lazy Load）",
+        subtitle:
+          `圖表採 lazy loading：只有打開對話框時才載入 ${inline("Chart.js")}，降低初始載入成本。`,
+        sections: [
+          section({
+            title: "Chart.js 的延遲載入模式",
+            body:
+              "如果全域沒有 Chart，就動態插入 script；載入失敗則允許 graceful fallback。",
+            code: TECH_SNIPPETS.ensureChartJs,
+          }),
+          callout("關鍵技術點", "把「重量級依賴」延後到真正需要時載入，對純前端靜態頁很實用。"),
+        ],
+      }),
+      topic({
+        id: "gantt",
+        title: "Gantt 時程視覺化（用百分比定位）",
+        subtitle:
+          "Gantt 視圖用日期換算成百分比位置與寬度，搭配 CSS 呈現時間軸與進度條。",
+        sections: [
+          section({
+            title: "從日期推導位置與寬度",
+            body:
+              "核心做法是把日期轉成與年度範圍的相對比例，再餵給 inline style。",
+            code: TECH_SNIPPETS.ganttProject,
+          }),
+          callout("關鍵技術點", "不用任何圖表套件也能做時間軸：關鍵在「比例換算 + CSS」。"),
+        ],
+      }),
+      topic({
+        id: "service-monitor",
+        title: "服務監控與用量面板",
+        subtitle:
+          `右下角的狀態點會定期打 ${inline(healthUrl)}，成功後才開放讀取 ${inline(usageUrl)} 的用量資料。`,
+        sections: [
+          section({
+            title: "健康檢查的超時控制（AbortController）",
+            body:
+              "透過 AbortController 設定超時，避免請求卡住。即使 no-cors 也能作為存活訊號。",
+            code: TECH_SNIPPETS.serviceMonitor,
+          }),
+          section({
+            title: "多格式 payload 正規化",
+            body:
+              "用量資料支援多帳號與多種 payload 格式，會先正規化再渲染卡片與環圖。",
+            points: [
+              "支援 accounts 陣列與 legacy 物件格式",
+              "會排除包含 -image 的模型名稱",
+              "同時處理 used / limit / percent / remaining 等不同欄位命名",
+            ],
+          }),
+        ],
+      }),
+      topic({
+        id: "versioning",
+        title: "版本號、快取破壞與更新檢查",
+        subtitle:
+          `版本號集中在 ${inline("APP_VERSION")}（目前：${inline(version)}），並同步到 ${inline("index.html")} 與 ${inline("version.json")}。`,
+        sections: [
+          section({
+            title: "更新檢查流程（version.json）",
+            body:
+              "用 no-store + 時間戳 query 避免快取，版本不同就彈出更新對話框。",
+            code: TECH_SNIPPETS.checkForUpdate,
+          }),
+          callout(
+            "專案規則（很重要）",
+            "每次改動都要同步更新：index.html 的 ?v=、app.js 的 APP_VERSION、version.json 的 version。"
+          ),
+        ],
+      }),
+      topic({
+        id: "theme-security",
+        title: "主題系統、背景動畫與安全性",
+        subtitle:
+          `主題用 ${inline("data-theme")} + CSS 變數切換；背景動畫用 ${inline("canvas")}；HTML 輸出前會走 ${inline("escapeHtml")}。`,
+        sections: [
+          section({
+            title: "主題切換的核心落點（data-theme）",
+            body:
+              "主題不是改 class，而是改 documentElement 的 data-theme，所有顏色透過 CSS variables 連動。",
+            code: TECH_SNIPPETS.themeApply,
+          }),
+          section({
+            title: "避免 HTML 注入（必做）",
+            body:
+              "所有使用者輸入在塞進 innerHTML 前，都先 escape。這是這個專案非常正確的習慣。",
+            code: TECH_SNIPPETS.escapeHtml,
+          }),
+        ],
+      }),
+    ];
+  }
+
+  getTechTopicById(topicId) {
+    return this.techTopics.find((topic) => topic.id === topicId) || null;
+  }
+
+  renderTechCatalog() {
+    if (!this.techCatalog || !this.techTopics.length) return;
+    this.techCatalog.innerHTML = this.techTopics
+      .map(
+        (topic) => `
+          <button
+            class="tech-topic-button"
+            type="button"
+            data-topic-id="${escapeHtml(topic.id)}"
+            aria-pressed="false"
+          >
+            <span class="tech-topic-button-title">${topic.title}</span>
+            <span class="tech-topic-button-desc">${topic.subtitle}</span>
+          </button>
+        `
+      )
+      .join("");
+
+    if (!this.techCatalogBound) {
+      this.techCatalog.addEventListener("click", (event) => {
+        const button = event.target.closest(".tech-topic-button");
+        if (!button) return;
+        this.setTechTopic(button.dataset.topicId);
+      });
+      this.techCatalogBound = true;
+    }
+
+    this.updateTechCatalogActive(this.techActiveTopicId);
+  }
+
+  updateTechCatalogActive(topicId) {
+    if (!this.techCatalog) return;
+    const buttons = Array.from(
+      this.techCatalog.querySelectorAll(".tech-topic-button")
+    );
+    buttons.forEach((button) => {
+      const isActive = button.dataset.topicId === topicId;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-pressed", isActive);
+    });
+  }
+
+  renderTechLoading(message = "載入技術文件中…") {
+    if (!this.techContent) return;
+    this.techContent.innerHTML = `<div class="tech-loading">${escapeHtml(
+      message
+    )}</div>`;
+  }
+
+  prefetchTechTopic(topicId) {
+    const index = this.techTopics.findIndex((topic) => topic.id === topicId);
+    if (index === -1) return;
+    const next = this.techTopics[index + 1] || this.techTopics[0];
+    if (!next || this.techTopicCache.has(next.id)) return;
+    window.setTimeout(() => {
+      if (this.techTopicCache.has(next.id)) return;
+      this.techTopicCache.set(next.id, next.render());
+    }, 0);
+  }
+
+  setTechTopic(topicId, { force = false } = {}) {
+    const resolvedId = this.resolveTechTopicId(topicId);
+    if (!resolvedId) return;
+    const topic = this.getTechTopicById(resolvedId);
+    if (!topic || !this.techContent) return;
+
+    if (!force && this.techActiveTopicId === resolvedId) return;
+
+    this.techActiveTopicId = resolvedId;
+    this.persistUiState();
+    this.updateTechCatalogActive(resolvedId);
+
+    const hasCached = this.techTopicCache.has(resolvedId);
+    if (this.techSwitchTimer) {
+      window.clearTimeout(this.techSwitchTimer);
+      this.techSwitchTimer = null;
+    }
+
+    this.techContent.classList.add("is-switching");
+
+    if (!hasCached) {
+      window.setTimeout(() => {
+        if (this.techContent?.dataset.topicId === resolvedId) return;
+        this.renderTechLoading("整理重點中…");
+      }, 90);
+    }
+
+    const delay = hasCached ? 110 : 170;
+    this.techSwitchTimer = window.setTimeout(() => {
+      const html = hasCached ? this.techTopicCache.get(resolvedId) : topic.render();
+      if (!hasCached) {
+        this.techTopicCache.set(resolvedId, html);
+      }
+      this.techContent.dataset.topicId = resolvedId;
+      this.techContent.innerHTML = html;
+      this.techContent.scrollTop = 0;
+      this.techContent.classList.remove("is-switching");
+      this.highlightTechCode();
+      this.prefetchTechTopic(resolvedId);
+    }, delay);
+  }
+
+  openTechDialog(topicId = null) {
+    if (!this.techDialog) return;
+    this.renderTechCatalog();
+    const targetId = this.resolveTechTopicId(topicId || this.techActiveTopicId);
+    this.setTechTopic(targetId, { force: true });
+    if (typeof this.techDialog.showModal === "function") {
+      this.techDialog.showModal();
+    } else {
+      this.techDialog.setAttribute("open", "true");
+    }
+    this.syncNotifyLayer();
+  }
+
+  closeTechDialog() {
+    if (!this.techDialog) return;
+    if (this.techDialog.open) {
+      this.techDialog.close();
+    } else {
+      this.techDialog.removeAttribute("open");
+    }
+    this.syncNotifyLayer();
+  }
+
+  ensureHighlightJs() {
+    if (typeof window.hljs !== "undefined") {
+      return Promise.resolve(true);
+    }
+    if (this.highlightJsPromise) {
+      return this.highlightJsPromise;
+    }
+    this.highlightJsPromise = new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = HIGHLIGHT_JS_SRC;
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => {
+        this.highlightJsPromise = null;
+        resolve(false);
+      };
+      document.head.appendChild(script);
+    });
+    return this.highlightJsPromise;
+  }
+
+  highlightTechCode() {
+    if (!this.techContent) return;
+    this.ensureHighlightJs().then((loaded) => {
+      if (!loaded || typeof window.hljs === "undefined") return;
+      const blocks = this.techContent.querySelectorAll("pre code");
+      blocks.forEach((block) => {
+        window.hljs.highlightElement(block);
+      });
+    });
   }
 
   openGanttDialog() {
@@ -2385,6 +3044,29 @@ class ProjectIdeaUI {
   setActiveProjectId(projectId) {
     this.activeProjectId = projectId;
     this.persistUiState();
+  }
+
+  shouldAutoScrollToIdeasPanel() {
+    return true;
+  }
+
+  scrollToIdeasPanelTop({ force = false, behavior = "smooth" } = {}) {
+    if (!this.ideasPanel) return;
+    if (!force && !this.shouldAutoScrollToIdeasPanel()) return;
+
+    const rect = this.ideasPanel.getBoundingClientRect();
+    const baseOffset = this.isTopbarSticky && this.topbar
+      ? Math.round(this.topbar.getBoundingClientRect().height)
+      : 0;
+    const spacerOffset = this.topbarSpacer
+      ? Math.round(this.topbarSpacer.getBoundingClientRect().height)
+      : 0;
+    const offset = Math.max(baseOffset, spacerOffset, 0) + 10;
+    const targetTop = Math.max(0, window.scrollY + rect.top - offset);
+    const delta = Math.abs(targetTop - window.scrollY);
+    if (!force && delta < 6) return;
+
+    window.scrollTo({ top: targetTop, behavior });
   }
 
   setLogVisibility(isVisible) {
@@ -3676,8 +4358,12 @@ class ProjectIdeaUI {
         tone: "success",
       });
       this.projectNameInput.value = "";
+      const shouldScroll = this.shouldAutoScrollToIdeasPanel();
       this.setActiveProjectId(project.id);
       this.render();
+      if (shouldScroll) {
+        window.requestAnimationFrame(() => this.scrollToIdeasPanelTop());
+      }
     });
 
     this.projectsList.addEventListener("click", (event) => {
@@ -3731,8 +4417,12 @@ class ProjectIdeaUI {
 
       const card = event.target.closest(".project-card");
       if (!card) return;
+      const shouldScroll = this.shouldAutoScrollToIdeasPanel();
       this.setActiveProjectId(card.dataset.id);
       this.render();
+      if (shouldScroll) {
+        window.requestAnimationFrame(() => this.scrollToIdeasPanelTop());
+      }
     });
 
     this.projectsList.addEventListener("dragstart", (event) => {
@@ -3909,6 +4599,13 @@ class ProjectIdeaUI {
       if (this.logDialog.open || this.logDialog.hasAttribute("open")) {
         this.renderLogDialogChart();
       }
+      if (this.techDialog?.open || this.techDialog?.hasAttribute("open")) {
+        this.highlightTechCode();
+      }
+    });
+
+    this.techToggle?.addEventListener("click", () => {
+      this.openTechDialog();
     });
 
     this.ganttToggle?.addEventListener("click", () => {
@@ -4229,6 +4926,23 @@ class ProjectIdeaUI {
       }
     });
 
+    this.techClose?.addEventListener("click", () => {
+      this.closeTechDialog();
+    });
+
+    this.techDialog?.addEventListener("click", (event) => {
+      if (event.target === this.techDialog) {
+        this.closeTechDialog();
+      }
+    });
+
+    this.techDialog?.addEventListener("close", () => {
+      if (this.techSwitchTimer) {
+        window.clearTimeout(this.techSwitchTimer);
+        this.techSwitchTimer = null;
+      }
+    });
+
     this.limitsClose?.addEventListener("click", () => {
       this.closeLimitsDialog();
     });
@@ -4409,6 +5123,12 @@ class ProjectIdeaUI {
       this.importButton.innerHTML = `${ICONS.upload}<span class="sr-only">Import data</span>`;
       this.importButton.setAttribute("aria-label", "Import data");
       this.importButton.title = "Import data";
+    }
+
+    if (this.techToggle) {
+      this.techToggle.innerHTML = `${ICONS.tech}<span class="sr-only">Tech Details</span>`;
+      this.techToggle.setAttribute("aria-label", "Tech Details");
+      this.techToggle.title = "Tech Details";
     }
 
     if (this.ganttToggle) {

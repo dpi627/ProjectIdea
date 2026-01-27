@@ -10,7 +10,7 @@
     href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMxZjhhNzAiLz48cG9seWdvbiBwb2ludHM9IjMyIDEwIDU0IDMyIDMyIDU0IDEwIDMyIiBmaWxsPSIjZmZmZmZmIi8+PC9zdmc+"
   />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-  <link rel="stylesheet" href="styles.css?v=20260124173038" />
+  <link rel="stylesheet" href="styles.css?v=20260127112048" />
 </head>
 <body>
   <canvas id="bgCanvas" aria-hidden="true"></canvas>
@@ -25,6 +25,7 @@
       </div>
       <div class="topbar-actions">
         <button id="themeToggle" class="ghost theme-toggle" type="button" aria-label="Dark mode"></button>
+        <button id="techToggle" class="ghost topbar-icon" type="button" aria-label="Tech Details"></button>
         <button id="ganttToggle" class="ghost topbar-icon" type="button" aria-label="Project Timeline"></button>
         <button id="settingsToggle" class="ghost topbar-icon" type="button" aria-label="Settings"></button>
         <button id="logToggle" class="ghost log-toggle" type="button" aria-label="Hide log"></button>
@@ -378,6 +379,30 @@
     </div>
   </dialog>
 
+  <dialog id="techDialog" class="dialog tech-dialog">
+    <div class="dialog-card tech-card">
+      <div class="tech-header">
+        <div>
+          <p class="eyebrow">技術說明</p>
+          <h3>Tech Details</h3>
+        </div>
+        <button id="techClose" class="ghost" type="button">Close</button>
+      </div>
+      <div class="tech-body">
+        <section class="tech-content-wrap" aria-live="polite">
+          <div id="techContent" class="tech-content"></div>
+        </section>
+        <aside class="tech-catalog" aria-label="Tech topics">
+          <div class="tech-catalog-header">
+            <p class="eyebrow">目錄</p>
+            <p class="tech-catalog-note">點選主題以載入內容</p>
+          </div>
+          <nav id="techCatalog" class="tech-catalog-list"></nav>
+        </aside>
+      </div>
+    </div>
+  </dialog>
+
   <dialog id="settingsDialog" class="dialog settings-dialog">
     <div class="dialog-card settings-card">
       <div class="settings-header">
@@ -638,6 +663,6 @@
     </div>
   </dialog>
 
-  <script src="app.js?v=20260124173038"></script>
+  <script src="app.js?v=20260127112048"></script>
 </body>
 </html>
