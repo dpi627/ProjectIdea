@@ -172,13 +172,13 @@ body {
 
 .workspace {
   display: grid;
-  grid-template-columns: clamp(260px, 22vw, 320px) minmax(0, 1fr) clamp(280px, 24vw, 420px);
+  grid-template-columns: clamp(280px, 24vw, 420px) minmax(0, 1fr) clamp(280px, 24vw, 420px);
   gap: 22px;
   margin-top: 28px;
 }
 
 .workspace.log-hidden {
-  grid-template-columns: clamp(260px, 22vw, 320px) minmax(0, 1fr);
+  grid-template-columns: clamp(280px, 24vw, 420px) minmax(0, 1fr);
 }
 
 .panel {
@@ -1287,6 +1287,20 @@ button:hover {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.dialog-actions .danger {
+  margin-right: auto;
+}
+
+.danger {
+  border-color: rgba(199, 68, 68, 0.5);
+  color: #c74444;
+}
+
+[data-theme="dark"] .danger {
+  border-color: rgba(255, 138, 138, 0.6);
+  color: #ff8a8a;
 }
 
 .limits-card {
@@ -2615,6 +2629,7 @@ button:hover {
   padding: 2px 8px;
   font-size: 11px;
   font-weight: 600;
+  font-family: "JetBrains Mono", "SFMono-Regular", "Consolas", monospace;
   border-radius: 999px;
   line-height: 1.4;
 }

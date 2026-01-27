@@ -2,7 +2,7 @@ const STORAGE_KEY = "project-idea-collection.v1";
 const THEME_KEY = "project-idea-collection.theme";
 const UI_STATE_KEY = "project-idea-collection.ui";
 const LOCAL_FILE_NAME = "project-ideas.json";
-const APP_VERSION = "20260127140457";
+const APP_VERSION = "20260127142030";
 const DEFAULT_UPDATE_CHECK_INTERVAL_MS = 60_000;
 const MIN_UPDATE_CHECK_INTERVAL_MS = 10_000;
 const MAX_UPDATE_CHECK_INTERVAL_MS = 3_600_000;
@@ -1379,6 +1379,7 @@ class ProjectIdeaUI {
     this.editDueDateInput = document.getElementById("editDueDate");
     this.editCategoryField = document.getElementById("editCategoryField");
     this.editCategoryInput = document.getElementById("editCategory");
+    this.editDelete = document.getElementById("editDelete");
     this.editCancel = document.getElementById("editCancel");
     this.confirmDialog = document.getElementById("confirmDialog");
     this.confirmForm = document.getElementById("confirmForm");
@@ -4583,27 +4584,8 @@ class ProjectIdeaUI {
           return;
         }
         if (action === "delete-project") {
-          const project = this.service.findProject(projectId);
-          this.openConfirmDialog({
-            title: "Delete project",
-            message: `Delete "${project.name}"?`,
-            confirmText: "Delete project",
-            onConfirm: () => {
-              this.service.deleteProject(projectId);
-              this.animateProjectsOnNextRender = true;
-              this.pushNotification({
-                title: "Project deleted",
-                message: project.name,
-                tone: "warning",
-              });
-              if (this.activeProjectId === projectId) {
-                this.setActiveProjectId(
-                  this.service.getProjects()[0]?.id || null
-                );
-              }
-              this.render();
-            },
-          });
+          this.requestProjectDeletion(projectId);
+          return;
         }
         return;
       }
@@ -5084,6 +5066,13 @@ class ProjectIdeaUI {
       }
     });
 
+    this.editDelete?.addEventListener("click", () => {
+      if (this.editingMode !== "project" || !this.editingProjectId) return;
+      this.requestProjectDeletion(this.editingProjectId, {
+        closeEditDialog: true,
+      });
+    });
+
     this.editCancel.addEventListener("click", () => {
       this.closeEditDialog();
     });
@@ -5399,6 +5388,11 @@ class ProjectIdeaUI {
     this.editDueDateInput.value = dueDate || "";
     this.editCategoryField.classList.toggle("hidden", !showDescription);
     this.editCategoryInput.value = showDescription ? (category || "") : "";
+    if (this.editDelete) {
+      const showDelete = mode === "project";
+      this.editDelete.classList.toggle("hidden", !showDelete);
+      this.editDelete.disabled = !showDelete;
+    }
 
     if (typeof this.editDialog.showModal === "function") {
       this.editDialog.showModal();
@@ -5460,6 +5454,10 @@ class ProjectIdeaUI {
     this.editDueDateInput.value = "";
     this.editCategoryField.classList.add("hidden");
     this.editCategoryInput.value = "";
+    if (this.editDelete) {
+      this.editDelete.classList.add("hidden");
+      this.editDelete.disabled = true;
+    }
     this.syncNotifyLayer();
   }
 
@@ -5505,6 +5503,36 @@ class ProjectIdeaUI {
         onConfirm: () => resolve(true),
         onCancel: () => resolve(false),
       });
+    });
+  }
+
+  requestProjectDeletion(projectId, { closeEditDialog = false } = {}) {
+    if (!projectId) return;
+    const project = this.service.findProject(projectId);
+    this.openConfirmDialog({
+      title: "Delete project",
+      message: `Delete "${project.name}"?`,
+      confirmText: "Delete project",
+      onConfirm: () => {
+        this.service.deleteProject(projectId);
+        this.animateProjectsOnNextRender = true;
+        this.pushNotification({
+          title: "Project deleted",
+          message: project.name,
+          tone: "warning",
+        });
+        if (this.activeProjectId === projectId) {
+          this.setActiveProjectId(this.service.getProjects()[0]?.id || null);
+        }
+        if (closeEditDialog) {
+          this.closeEditDialog();
+        }
+        this.render();
+        if (this.ganttDialog?.open) {
+          this.updateGanttCategoryTabs();
+          this.renderGanttChart();
+        }
+      },
     });
   }
 
@@ -5688,10 +5716,6 @@ class ProjectIdeaUI {
             <button class="icon-button" type="button" data-action="edit-project" aria-label="Edit project" title="Edit project">
               ${ICONS.edit}
               <span class="sr-only">Edit</span>
-            </button>
-            <button class="icon-button" type="button" data-action="delete-project" aria-label="Delete project" title="Delete project">
-              ${ICONS.trash}
-              <span class="sr-only">Delete</span>
             </button>
           </div>
         </div>
