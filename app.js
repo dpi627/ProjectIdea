@@ -2,7 +2,7 @@ const STORAGE_KEY = "project-idea-collection.v1";
 const THEME_KEY = "project-idea-collection.theme";
 const UI_STATE_KEY = "project-idea-collection.ui";
 const LOCAL_FILE_NAME = "project-ideas.json";
-const APP_VERSION = "20260127142030";
+const APP_VERSION = "20260127150341";
 const DEFAULT_UPDATE_CHECK_INTERVAL_MS = 60_000;
 const MIN_UPDATE_CHECK_INTERVAL_MS = 10_000;
 const MAX_UPDATE_CHECK_INTERVAL_MS = 3_600_000;
@@ -18,6 +18,7 @@ const PRISM_CLIKE_SRC =
 const PRISM_JAVASCRIPT_SRC =
   `https://cdn.jsdelivr.net/npm/prismjs@${PRISM_VERSION}/components/prism-javascript.min.js`;
 const GANTT_CATEGORY_OPTIONS = ["CI", "MP", "SP"];
+const PROJECT_CATEGORY_FILTER_OPTIONS = [...GANTT_CATEGORY_OPTIONS, "none"];
 
 const createId = () => {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -156,14 +157,16 @@ const ICONS = {
   `,
   pin: `
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M9 3h6l-1.6 6.2 3.6 3.6-1.2 1.2-4.8-2.4-4.8 2.4-1.2-1.2 3.6-3.6L9 3z" />
-      <line x1="12" y1="13" x2="12" y2="21" />
+      <rect x="7" y="2.5" width="10" height="3.6" rx="0.8" ry="0.8" />
+      <path d="M9 8.1h6v5.1l3 2.8H6l3-2.8V8.1z" />
+      <line x1="12" y1="16" x2="12" y2="21" />
     </svg>
   `,
   pinOff: `
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M9 3h6l-1.6 6.2 3.6 3.6-1.2 1.2-4.8-2.4-4.8 2.4-1.2-1.2 3.6-3.6L9 3z" />
-      <line x1="12" y1="13" x2="12" y2="21" />
+      <rect x="7" y="2.5" width="10" height="3.6" rx="0.8" ry="0.8" />
+      <path d="M9 8.1h6v5.1l3 2.8H6l3-2.8V8.1z" />
+      <line x1="12" y1="16" x2="12" y2="21" />
       <line x1="4" y1="4" x2="20" y2="20" />
     </svg>
   `,
@@ -229,13 +232,14 @@ const ICONS = {
   `,
   tech: `
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-      <path d="M4 4.5A2.5 2.5 0 0 1 6.5 7H20" />
-      <path d="M20 3v18" />
-      <path d="M6.5 7h10.5" />
-      <path d="M6.5 17h10.5" />
-      <path d="M9 10l-2 2 2 2" />
-      <path d="M13 10l2 2-2 2" />
+      <path d="M3.5 6.5A2.5 2.5 0 0 1 6 4h4.6A4.4 4.4 0 0 1 12 6.2V18.4A4.4 4.4 0 0 0 8.6 16H6a2.5 2.5 0 0 1-2.5-2.5V6.5z" />
+      <path d="M20.5 6.5A2.5 2.5 0 0 0 18 4h-4.6A4.4 4.4 0 0 0 12 6.2V18.4A4.4 4.4 0 0 1 15.4 16H18a2.5 2.5 0 0 0 2.5-2.5V6.5z" />
+      <line x1="12" y1="6.2" x2="12" y2="20.4" />
+      <path d="M6.2 8.6h3.4" />
+      <path d="M6.2 11.6h3.4" />
+      <path d="M14.4 8.6h3.4" />
+      <path d="M14.4 11.6h3.4" />
+      <path d="M3.5 18.6Q7.2 16.8 11.1 18.4Q12 18.8 12.9 18.4Q16.8 16.8 20.5 18.6" />
     </svg>
   `,
   database: `
@@ -1263,6 +1267,8 @@ class ProjectIdeaUI {
     this.projectsList = document.getElementById("projectsList");
     this.projectForm = document.getElementById("projectForm");
     this.projectNameInput = document.getElementById("projectName");
+    this.projectFilterInput = document.getElementById("projectFilterInput");
+    this.projectCategoryFilters = document.getElementById("projectCategoryFilters");
     this.activeProjectName = document.getElementById("activeProjectName");
     this.progressFill = document.getElementById("progressFill");
     this.progressLabel = document.getElementById("progressLabel");
@@ -1401,6 +1407,10 @@ class ProjectIdeaUI {
     this.animateIdeasOnNextRender = true;
     this.logFilterValue = "";
     this.logProjectFilterValue = "all";
+    this.projectFilterQuery = this.resolveProjectFilterQuery(uiState.projectFilterQuery);
+    this.projectCategoryFilter = this.normalizeProjectCategoryFilter(
+      uiState.projectCategoryFilter
+    );
     this.ideaFilter = this.resolveIdeaFilter(uiState.ideaFilter);
     this.copyWithUltrathink =
       typeof uiState.copyWithUltrathink === "boolean"
@@ -1566,6 +1576,93 @@ class ProjectIdeaUI {
     return matches ? projectId : projects[0]?.id || null;
   }
 
+  resolveProjectFilterQuery(query) {
+    if (typeof query !== "string") return "";
+    return query.trim();
+  }
+
+  normalizeProjectCategoryFilter(value) {
+    if (!Array.isArray(value)) {
+      return new Set(PROJECT_CATEGORY_FILTER_OPTIONS);
+    }
+    const allowed = new Set(PROJECT_CATEGORY_FILTER_OPTIONS);
+    const next = value.filter((item) => allowed.has(item));
+    return new Set(next);
+  }
+
+  isAllProjectCategoriesSelected() {
+    return PROJECT_CATEGORY_FILTER_OPTIONS.every((category) =>
+      this.projectCategoryFilter.has(category)
+    );
+  }
+
+  getProjectCategoryKey(project) {
+    return project?.category || "none";
+  }
+
+  filterProjects(projects) {
+    const query = (this.projectFilterQuery || "").toLowerCase();
+    const hasQuery = query.length > 0;
+    const allCategoriesSelected = this.isAllProjectCategoriesSelected();
+    const activeCategories = this.projectCategoryFilter;
+    return projects.filter((project) => {
+      const nameMatch =
+        !hasQuery || project.name.toLowerCase().includes(query);
+      if (!nameMatch) return false;
+      if (allCategoriesSelected) return true;
+      const categoryKey = this.getProjectCategoryKey(project);
+      return activeCategories.has(categoryKey);
+    });
+  }
+
+  syncProjectFilterUI(projects, visibleProjects) {
+    if (this.projectFilterInput) {
+      const currentValue = this.projectFilterInput.value;
+      if (currentValue !== this.projectFilterQuery) {
+        this.projectFilterInput.value = this.projectFilterQuery;
+      }
+    }
+    if (!this.projectCategoryFilters) return;
+    const buttons = Array.from(
+      this.projectCategoryFilters.querySelectorAll("button[data-category]")
+    );
+    const allSelected = this.isAllProjectCategoriesSelected();
+    const counts = new Map();
+    projects.forEach((project) => {
+      const key = this.getProjectCategoryKey(project);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    const visibleCount = visibleProjects.length;
+    buttons.forEach((button) => {
+      const category = button.dataset.category;
+      if (!category) return;
+      const isAllButton = category === "all";
+      const isActive = isAllButton
+        ? allSelected
+        : this.projectCategoryFilter.has(category);
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-pressed", isActive ? "true" : "false");
+      if (isAllButton) {
+        button.textContent = `All (${visibleCount}/${projects.length})`;
+        return;
+      }
+      const baseLabel =
+        category === "none" ? "None" : category;
+      const total = counts.get(category) || 0;
+      button.textContent = `${baseLabel} (${total})`;
+    });
+  }
+
+  ensureActiveProjectVisible(visibleProjects) {
+    const isActiveVisible = visibleProjects.some(
+      (project) => project.id === this.activeProjectId
+    );
+    if (isActiveVisible) return;
+    const nextActiveId = visibleProjects[0]?.id || null;
+    if (nextActiveId === this.activeProjectId) return;
+    this.setActiveProjectId(nextActiveId);
+  }
+
   resolveIdeaFilter(filter) {
     const allowed = ["todo", "done", "all"];
     return allowed.includes(filter) ? filter : "todo";
@@ -1585,6 +1682,8 @@ class ProjectIdeaUI {
     return {
       activeProjectId: this.activeProjectId,
       isLogVisible: this.isLogVisible,
+      projectFilterQuery: this.projectFilterQuery,
+      projectCategoryFilter: Array.from(this.projectCategoryFilter),
       ideaFilter: this.ideaFilter,
       copyWithUltrathink: this.copyWithUltrathink,
       serviceMonitorEnabled: this.serviceMonitorEnabled,
@@ -3178,6 +3277,13 @@ class ProjectIdeaUI {
 
   applyImportedUiState(uiState) {
     if (!uiState || typeof uiState !== "object") return false;
+    const nextProjectFilterQuery =
+      typeof uiState.projectFilterQuery === "string"
+        ? this.resolveProjectFilterQuery(uiState.projectFilterQuery)
+        : this.projectFilterQuery;
+    const nextProjectCategoryFilter = Array.isArray(uiState.projectCategoryFilter)
+      ? this.normalizeProjectCategoryFilter(uiState.projectCategoryFilter)
+      : this.projectCategoryFilter;
     const nextIdeaFilter =
       typeof uiState.ideaFilter === "string"
         ? this.resolveIdeaFilter(uiState.ideaFilter)
@@ -3213,6 +3319,8 @@ class ProjectIdeaUI {
       typeof uiState.isLogVisible === "boolean"
         ? uiState.isLogVisible
         : this.isLogVisible;
+    this.projectFilterQuery = nextProjectFilterQuery;
+    this.projectCategoryFilter = nextProjectCategoryFilter;
     this.ideaFilter = nextIdeaFilter;
     this.activeProjectId = this.resolveActiveProjectId(uiState.activeProjectId);
     this.persistUiState();
@@ -3225,23 +3333,67 @@ class ProjectIdeaUI {
     this.persistUiState();
   }
 
+  setProjectFilterQuery(query, { skipPersist = false } = {}) {
+    const next = this.resolveProjectFilterQuery(query);
+    if (next === this.projectFilterQuery) return;
+    this.projectFilterQuery = next;
+    if (!skipPersist) {
+      this.persistUiState();
+    }
+  }
+
+  setProjectCategoryFilterAll({ skipPersist = false } = {}) {
+    this.projectCategoryFilter = new Set(PROJECT_CATEGORY_FILTER_OPTIONS);
+    if (!skipPersist) {
+      this.persistUiState();
+    }
+  }
+
+  toggleProjectCategoryFilter(category, { skipPersist = false } = {}) {
+    if (!PROJECT_CATEGORY_FILTER_OPTIONS.includes(category)) return;
+    const next = new Set(this.projectCategoryFilter);
+    if (next.has(category)) {
+      next.delete(category);
+    } else {
+      next.add(category);
+    }
+    this.projectCategoryFilter = next;
+    if (!skipPersist) {
+      this.persistUiState();
+    }
+  }
+
   shouldAutoScrollToIdeasPanel() {
     return true;
+  }
+
+  isDesktopViewport() {
+    return typeof window !== "undefined" && window.innerWidth > 1100;
   }
 
   scrollToIdeasPanelTop({ force = false, behavior = "smooth" } = {}) {
     if (!this.ideasPanel) return;
     if (!force && !this.shouldAutoScrollToIdeasPanel()) return;
 
+    if (this.isDesktopViewport()) {
+      const deltaTop = Math.abs(window.scrollY);
+      if (!force && deltaTop < 6) return;
+      window.scrollTo({ top: 0, behavior });
+      return;
+    }
+
     const rect = this.ideasPanel.getBoundingClientRect();
-    const baseOffset = this.isTopbarSticky && this.topbar
+    const panelTop = window.scrollY + rect.top;
+    const topbarHeight = this.topbar
       ? Math.round(this.topbar.getBoundingClientRect().height)
       : 0;
-    const spacerOffset = this.topbarSpacer
-      ? Math.round(this.topbarSpacer.getBoundingClientRect().height)
-      : 0;
-    const offset = Math.max(baseOffset, spacerOffset, 0) + 10;
-    const targetTop = Math.max(0, window.scrollY + rect.top - offset);
+    const stickyOffset = Math.max(0, topbarHeight) + 10;
+    const targetWithStickyOffset = panelTop - stickyOffset;
+    const wouldStickAtTarget =
+      typeof this.topbarStickyThreshold === "number" &&
+      targetWithStickyOffset >= this.topbarStickyThreshold;
+    const offset = wouldStickAtTarget ? stickyOffset : 10;
+    const targetTop = Math.max(0, panelTop - offset);
     const delta = Math.abs(targetTop - window.scrollY);
     if (!force && delta < 6) return;
 
@@ -4548,6 +4700,24 @@ class ProjectIdeaUI {
       }
     });
 
+    this.projectFilterInput?.addEventListener("input", (event) => {
+      this.setProjectFilterQuery(event.target.value);
+      this.render();
+    });
+
+    this.projectCategoryFilters?.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-category]");
+      if (!button) return;
+      const category = button.dataset.category;
+      if (!category) return;
+      if (category === "all") {
+        this.setProjectCategoryFilterAll();
+      } else {
+        this.toggleProjectCategoryFilter(category);
+      }
+      this.render();
+    });
+
     this.projectsList.addEventListener("click", (event) => {
       const actionButton = event.target.closest("button[data-action]");
       if (actionButton) {
@@ -5658,6 +5828,8 @@ class ProjectIdeaUI {
 
   renderProjects() {
     const projects = this.service.getProjects();
+    const visibleProjects = this.filterProjects(projects);
+    this.syncProjectFilterUI(projects, visibleProjects);
     this.projectsList.innerHTML = "";
     const shouldAnimate = this.animateProjectsOnNextRender;
     this.animateProjectsOnNextRender = false;
@@ -5670,7 +5842,23 @@ class ProjectIdeaUI {
       return;
     }
 
-    projects.forEach((project, index) => {
+    this.ensureActiveProjectVisible(visibleProjects);
+
+    if (visibleProjects.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "empty-state";
+      if (this.projectCategoryFilter.size === 0) {
+        empty.textContent = "Select at least one category to show projects.";
+      } else if (this.projectFilterQuery) {
+        empty.textContent = `No projects found for "${this.projectFilterQuery}".`;
+      } else {
+        empty.textContent = "No projects match your current filters.";
+      }
+      this.projectsList.appendChild(empty);
+      return;
+    }
+
+    visibleProjects.forEach((project, index) => {
       const stats = project.stats();
       const hasOpenIdeas = stats.total > 0 && stats.done < stats.total;
       const description = (project.description || "").trim();

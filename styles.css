@@ -223,7 +223,8 @@ body {
 }
 
 .log-filter input,
-.log-filter select {
+.log-filter select,
+.project-filter-search input {
   padding: 8px 12px;
   border-radius: 12px;
   border: 1px solid var(--border);
@@ -235,6 +236,17 @@ body {
 
 #logProjectFilter {
   margin-top: 3px;
+}
+
+.project-filters {
+  display: grid;
+  gap: 10px;
+}
+
+.project-category-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .eyebrow {
