@@ -205,12 +205,23 @@ body {
 .panel-header {
   display: grid;
   gap: 18px;
+  position: relative;
+}
+
+.projects-panel .panel-header,
+.ideas-panel .panel-header,
+.log-panel .panel-header {
+  padding-top: 18px;
 }
 
 .panel-header-row {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "title title"
+    "form form";
+  align-items: center;
 }
 
 .project-add-form {
@@ -239,14 +250,43 @@ body {
 }
 
 .project-filters {
-  display: grid;
-  gap: 10px;
+  display: flex;
+  margin-left: auto;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.projects-title-row {
+  grid-area: title;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.projects-title-block {
+  min-width: 0;
+  position: relative;
+}
+
+.projects-title-block .eyebrow {
+  position: absolute;
+  top: -18px;
+  left: 0;
+  margin: 0;
+}
+
+.project-add-form {
+  grid-area: form;
+  width: 100%;
+  min-width: 0;
 }
 
 .project-category-filters {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .eyebrow {
@@ -734,6 +774,13 @@ button:hover {
   gap: 12px;
 }
 
+.ideas-panel .eyebrow-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
 .eyebrow-row .eyebrow {
   flex-shrink: 0;
   margin: 0;
@@ -760,6 +807,17 @@ button:hover {
 }
 
 .ideas-panel .idea-tabs {
+  margin: 0;
+}
+
+.log-panel .panel-header > div:first-child {
+  position: relative;
+}
+
+.log-panel .panel-header > div:first-child .eyebrow {
+  position: absolute;
+  top: -18px;
+  left: 0;
   margin: 0;
 }
 
@@ -2506,6 +2564,28 @@ button:hover {
   .workspace,
   .workspace.log-hidden {
     grid-template-columns: 1fr;
+  }
+
+  .panel-header-row {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "title"
+      "form";
+    align-items: stretch;
+  }
+
+  .projects-title-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .project-filters {
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+
+  .project-category-filters {
+    justify-content: flex-start;
   }
 
   .panel {

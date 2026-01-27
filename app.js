@@ -2,7 +2,7 @@ const STORAGE_KEY = "project-idea-collection.v1";
 const THEME_KEY = "project-idea-collection.theme";
 const UI_STATE_KEY = "project-idea-collection.ui";
 const LOCAL_FILE_NAME = "project-ideas.json";
-const APP_VERSION = "20260127150341";
+const APP_VERSION = "20260127155339";
 const DEFAULT_UPDATE_CHECK_INTERVAL_MS = 60_000;
 const MIN_UPDATE_CHECK_INTERVAL_MS = 10_000;
 const MAX_UPDATE_CHECK_INTERVAL_MS = 3_600_000;
@@ -1411,6 +1411,9 @@ class ProjectIdeaUI {
     this.projectCategoryFilter = this.normalizeProjectCategoryFilter(
       uiState.projectCategoryFilter
     );
+    if (!this.projectFilterInput && this.projectFilterQuery) {
+      this.projectFilterQuery = "";
+    }
     this.ideaFilter = this.resolveIdeaFilter(uiState.ideaFilter);
     this.copyWithUltrathink =
       typeof uiState.copyWithUltrathink === "boolean"
@@ -1602,7 +1605,8 @@ class ProjectIdeaUI {
 
   filterProjects(projects) {
     const query = (this.projectFilterQuery || "").toLowerCase();
-    const hasQuery = query.length > 0;
+    const allowNameFilter = Boolean(this.projectFilterInput);
+    const hasQuery = allowNameFilter && query.length > 0;
     const allCategoriesSelected = this.isAllProjectCategoriesSelected();
     const activeCategories = this.projectCategoryFilter;
     return projects.filter((project) => {
@@ -1626,30 +1630,20 @@ class ProjectIdeaUI {
     const buttons = Array.from(
       this.projectCategoryFilters.querySelectorAll("button[data-category]")
     );
-    const allSelected = this.isAllProjectCategoriesSelected();
     const counts = new Map();
     projects.forEach((project) => {
       const key = this.getProjectCategoryKey(project);
       counts.set(key, (counts.get(key) || 0) + 1);
     });
-    const visibleCount = visibleProjects.length;
     buttons.forEach((button) => {
       const category = button.dataset.category;
       if (!category) return;
-      const isAllButton = category === "all";
-      const isActive = isAllButton
-        ? allSelected
-        : this.projectCategoryFilter.has(category);
+      const isActive = this.projectCategoryFilter.has(category);
       button.classList.toggle("is-active", isActive);
       button.setAttribute("aria-pressed", isActive ? "true" : "false");
-      if (isAllButton) {
-        button.textContent = `All (${visibleCount}/${projects.length})`;
-        return;
-      }
-      const baseLabel =
-        category === "none" ? "None" : category;
+      const baseLabel = category === "none" ? "NA" : category;
       const total = counts.get(category) || 0;
-      button.textContent = `${baseLabel} (${total})`;
+      button.textContent = `${baseLabel} ${total}`;
     });
   }
 

@@ -11,7 +11,7 @@
     href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMxZjhhNzAiLz48cG9seWdvbiBwb2ludHM9IjMyIDEwIDU0IDMyIDMyIDU0IDEwIDMyIiBmaWxsPSIjZmZmZmZmIi8+PC9zdmc+"
   />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-  <link rel="stylesheet" href="styles.css?v=20260127150341" />
+  <link rel="stylesheet" href="styles.css?v=20260127155339" />
 </head>
 <body>
   <canvas id="bgCanvas" aria-hidden="true"></canvas>
@@ -41,47 +41,37 @@
       <aside class="panel projects-panel">
         <div class="panel-header">
           <div class="panel-header-row">
-            <div>
-              <p class="eyebrow">Your space</p>
-              <h2>Projects</h2>
+            <div class="projects-title-row">
+              <div class="projects-title-block">
+                <p class="eyebrow">Your space</p>
+                <h2>Projects</h2>
+              </div>
+              <div class="project-filters" role="group" aria-label="Project filters">
+                <div
+                  id="projectCategoryFilters"
+                  class="project-category-filters"
+                  role="group"
+                  aria-label="Filter projects by category"
+                >
+                  <button type="button" class="tab-button project-category-button" data-category="CI" aria-pressed="true">
+                    CI
+                  </button>
+                  <button type="button" class="tab-button project-category-button" data-category="MP" aria-pressed="true">
+                    MP
+                  </button>
+                  <button type="button" class="tab-button project-category-button" data-category="SP" aria-pressed="true">
+                    SP
+                  </button>
+                  <button type="button" class="tab-button project-category-button" data-category="none" aria-pressed="true">
+                    NA
+                  </button>
+                </div>
+              </div>
             </div>
             <form id="projectForm" class="inline-form project-add-form" autocomplete="off">
               <input id="projectName" type="text" placeholder="New project name" maxlength="50" required />
               <button type="submit" class="primary">Add</button>
             </form>
-          </div>
-          <div class="project-filters" role="group" aria-label="Project filters">
-            <label class="project-filter-search">
-              <span class="sr-only">Filter projects by name</span>
-              <input
-                id="projectFilterInput"
-                type="text"
-                placeholder="Filter projects by name..."
-                autocomplete="off"
-              />
-            </label>
-            <div
-              id="projectCategoryFilters"
-              class="project-category-filters"
-              role="group"
-              aria-label="Filter projects by category"
-            >
-              <button type="button" class="tab-button project-category-button" data-category="all" aria-pressed="true">
-                All
-              </button>
-              <button type="button" class="tab-button project-category-button" data-category="CI" aria-pressed="true">
-                CI
-              </button>
-              <button type="button" class="tab-button project-category-button" data-category="MP" aria-pressed="true">
-                MP
-              </button>
-              <button type="button" class="tab-button project-category-button" data-category="SP" aria-pressed="true">
-                SP
-              </button>
-              <button type="button" class="tab-button project-category-button" data-category="none" aria-pressed="true">
-                None
-              </button>
-            </div>
           </div>
         </div>
         <!-- section project list -->
@@ -700,6 +690,6 @@
     </div>
   </dialog>
 
-  <script src="app.js?v=20260127150341"></script>
+  <script src="app.js?v=20260127155339"></script>
 </body>
 </html>
