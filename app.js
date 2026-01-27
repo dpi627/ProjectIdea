@@ -2,7 +2,7 @@ const STORAGE_KEY = "project-idea-collection.v1";
 const THEME_KEY = "project-idea-collection.theme";
 const UI_STATE_KEY = "project-idea-collection.ui";
 const LOCAL_FILE_NAME = "project-ideas.json";
-const APP_VERSION = "20260127131330";
+const APP_VERSION = "20260127140457";
 const DEFAULT_UPDATE_CHECK_INTERVAL_MS = 60_000;
 const MIN_UPDATE_CHECK_INTERVAL_MS = 10_000;
 const MAX_UPDATE_CHECK_INTERVAL_MS = 3_600_000;
@@ -34,12 +34,14 @@ const serializeProjects = (projects) =>
     startDate: project.startDate,
     dueDate: project.dueDate,
     category: project.category,
+    pinned: Boolean(project.pinned),
     ideas: project.ideas.map((idea) => ({
       id: idea.id,
       text: idea.text,
       done: idea.done,
       createdAt: idea.createdAt,
       finishedAt: idea.finishedAt,
+      pinned: Boolean(idea.pinned),
     })),
   }));
 
@@ -150,6 +152,19 @@ const ICONS = {
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <polyline points="1 4 1 10 7 10" />
       <path d="M3.5 15a9 9 0 1 0 2.3-9.7L1 10" />
+    </svg>
+  `,
+  pin: `
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M9 3h6l-1.6 6.2 3.6 3.6-1.2 1.2-4.8-2.4-4.8 2.4-1.2-1.2 3.6-3.6L9 3z" />
+      <line x1="12" y1="13" x2="12" y2="21" />
+    </svg>
+  `,
+  pinOff: `
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M9 3h6l-1.6 6.2 3.6 3.6-1.2 1.2-4.8-2.4-4.8 2.4-1.2-1.2 3.6-3.6L9 3z" />
+      <line x1="12" y1="13" x2="12" y2="21" />
+      <line x1="4" y1="4" x2="20" y2="20" />
     </svg>
   `,
   download: `
@@ -471,6 +486,27 @@ try {
 };
 
 // Domain layer
+const partitionByPinned = (items) => {
+  const pinned = [];
+  const unpinned = [];
+  items.forEach((item) => {
+    if (item?.pinned) {
+      pinned.push(item);
+      return;
+    }
+    unpinned.push(item);
+  });
+  return { pinned, unpinned };
+};
+
+const reorderPinnedFirst = (items) => {
+  const { pinned, unpinned } = partitionByPinned(items);
+  return [...pinned, ...unpinned];
+};
+
+const countPinned = (items) =>
+  items.reduce((total, item) => total + (item?.pinned ? 1 : 0), 0);
+
 class Idea {
   constructor({
     id = createId(),
@@ -478,24 +514,36 @@ class Idea {
     done = false,
     createdAt = Date.now(),
     finishedAt = null,
+    pinned = false,
   }) {
     this.id = id;
     this.text = text;
     this.done = done;
     this.createdAt = createdAt;
     this.finishedAt = finishedAt;
+    this.pinned = Boolean(pinned);
   }
 }
 
 class Project {
-  constructor({ id = createId(), name, description = "", startDate = null, dueDate = null, category = null, ideas = [] }) {
+  constructor({
+    id = createId(),
+    name,
+    description = "",
+    startDate = null,
+    dueDate = null,
+    category = null,
+    ideas = [],
+    pinned = false,
+  }) {
     this.id = id;
     this.name = name;
     this.description = description;
     this.startDate = startDate;
     this.dueDate = dueDate;
     this.category = category; // null | "CI" | "MP" | "SP"
-    this.ideas = ideas.map((idea) => new Idea(idea));
+    this.pinned = Boolean(pinned);
+    this.ideas = reorderPinnedFirst(ideas.map((idea) => new Idea(idea)));
   }
 
   stats() {
@@ -733,11 +781,21 @@ class ProjectService {
     this.wasSeeded = false;
     this.onChange = null;
 
+    this.normalizePinnedOrder();
+
     if (this.projects.length === 0) {
       this.projects = createMockProjects();
+      this.normalizePinnedOrder();
       this.repository.save(this.projects);
       this.wasSeeded = true;
     }
+  }
+
+  normalizePinnedOrder() {
+    this.projects = reorderPinnedFirst(this.projects);
+    this.projects.forEach((project) => {
+      project.ideas = reorderPinnedFirst(project.ideas);
+    });
   }
 
   getProjects() {
@@ -746,6 +804,7 @@ class ProjectService {
 
   reloadFromStorage() {
     this.projects = this.repository.load();
+    this.normalizePinnedOrder();
     return this.projects;
   }
 
@@ -774,7 +833,8 @@ class ProjectService {
       name: name.trim(),
       description: description.trim(),
     });
-    this.projects = [project, ...this.projects];
+    const pinnedCount = countPinned(this.projects);
+    this.projects.splice(pinnedCount, 0, project);
     this.repository.save(this.projects);
     this.notifyChange();
     return project;
@@ -805,6 +865,7 @@ class ProjectService {
               done: Boolean(idea.done),
               createdAt: Number.isFinite(idea.createdAt) ? idea.createdAt : Date.now(),
               finishedAt: idea.finishedAt || null,
+              pinned: Boolean(idea.pinned),
             }))
         : [];
       const validCategories = [null, "CI", "MP", "SP"];
@@ -817,9 +878,11 @@ class ProjectService {
         dueDate: project.dueDate || null,
         category,
         ideas,
+        pinned: Boolean(project.pinned),
       });
     });
     this.projects = projects;
+    this.normalizePinnedOrder();
     this.repository.save(this.projects);
     this.notifyChange();
     return this.projects;
@@ -866,9 +929,25 @@ class ProjectService {
 
   addIdea(projectId, text) {
     const project = this.findProject(projectId);
-    project.ideas.unshift(new Idea({ text: text.trim() }));
+    const pinnedCount = countPinned(project.ideas);
+    project.ideas.splice(pinnedCount, 0, new Idea({ text: text.trim() }));
     this.repository.save(this.projects);
     this.notifyChange();
+  }
+
+  toggleProjectPin(projectId) {
+    const index = this.projects.findIndex((item) => item.id === projectId);
+    if (index === -1) throw new Error("Project not found");
+    const [project] = this.projects.splice(index, 1);
+    const nextPinned = !project.pinned;
+    project.pinned = nextPinned;
+    const { pinned, unpinned } = partitionByPinned(this.projects);
+    const targetList = nextPinned ? pinned : unpinned;
+    targetList.unshift(project);
+    this.projects = [...pinned, ...unpinned];
+    this.repository.save(this.projects);
+    this.notifyChange();
+    return project;
   }
 
   updateIdeaText(projectId, ideaId, text) {
@@ -892,13 +971,32 @@ class ProjectService {
     const [idea] = project.ideas.splice(index, 1);
     idea.done = !idea.done;
     idea.finishedAt = idea.done ? new Date().toISOString() : null;
+    const { pinned, unpinned } = partitionByPinned(project.ideas);
+    const targetList = idea.pinned ? pinned : unpinned;
     if (idea.done) {
-      project.ideas.push(idea);
+      targetList.push(idea);
     } else {
-      project.ideas.unshift(idea);
+      targetList.unshift(idea);
     }
+    project.ideas = [...pinned, ...unpinned];
     this.repository.save(this.projects);
     this.notifyChange();
+  }
+
+  toggleIdeaPin(projectId, ideaId) {
+    const project = this.findProject(projectId);
+    const index = project.ideas.findIndex((item) => item.id === ideaId);
+    if (index === -1) throw new Error("Idea not found");
+    const [idea] = project.ideas.splice(index, 1);
+    const nextPinned = !idea.pinned;
+    idea.pinned = nextPinned;
+    const { pinned, unpinned } = partitionByPinned(project.ideas);
+    const targetList = nextPinned ? pinned : unpinned;
+    targetList.unshift(idea);
+    project.ideas = [...pinned, ...unpinned];
+    this.repository.save(this.projects);
+    this.notifyChange();
+    return idea;
   }
 
   moveIdea(projectId, ideaId, direction) {
@@ -908,6 +1006,7 @@ class ProjectService {
     if (index === -1 || nextIndex < 0 || nextIndex >= project.ideas.length) return;
     const [moved] = project.ideas.splice(index, 1);
     project.ideas.splice(nextIndex, 0, moved);
+    project.ideas = reorderPinnedFirst(project.ideas);
     this.repository.save(this.projects);
     this.notifyChange();
   }
@@ -920,6 +1019,7 @@ class ProjectService {
     if (fromIndex === -1 || toIndex === -1) return;
     const [moved] = project.ideas.splice(fromIndex, 1);
     project.ideas.splice(toIndex, 0, moved);
+    project.ideas = reorderPinnedFirst(project.ideas);
     this.repository.save(this.projects);
     this.notifyChange();
   }
@@ -931,6 +1031,7 @@ class ProjectService {
     if (fromIndex === -1 || toIndex === -1) return;
     const [moved] = this.projects.splice(fromIndex, 1);
     this.projects.splice(toIndex, 0, moved);
+    this.projects = reorderPinnedFirst(this.projects);
     this.repository.save(this.projects);
     this.notifyChange();
   }
@@ -1438,6 +1539,7 @@ class ProjectIdeaUI {
 
   applyProjects(projects) {
     this.service.projects = projects;
+    this.service.normalizePinnedOrder();
     this.activeProjectId = this.resolveActiveProjectId(this.activeProjectId);
   }
 
@@ -2257,7 +2359,11 @@ class ProjectIdeaUI {
       return projectEnd >= start && projectStart < end;
     });
 
-    projectsWithDates.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+    projectsWithDates.sort((a, b) => {
+      const pinnedDiff = Number(Boolean(b.pinned)) - Number(Boolean(a.pinned));
+      if (pinnedDiff !== 0) return pinnedDiff;
+      return new Date(a.startDate) - new Date(b.startDate);
+    });
 
     if (projectsWithDates.length === 0) {
       const categoryLabel = activeCategories.join(" / ");
@@ -4098,6 +4204,7 @@ class ProjectIdeaUI {
         fileData.projects.map((p) => new Project(p))
       );
     }
+    this.service.normalizePinnedOrder();
   }
 
   mergeProjects(currentProjects, newProjects) {
@@ -4110,6 +4217,7 @@ class ProjectIdeaUI {
         merged.push(newProject);
         projectMap.set(newProject.id, newProject);
       } else {
+        existing.pinned = Boolean(existing.pinned || newProject.pinned);
         const ideaMap = new Map(existing.ideas.map((i) => [i.id, i]));
         for (const newIdea of newProject.ideas) {
           if (!ideaMap.has(newIdea.id)) {
@@ -4159,6 +4267,7 @@ class ProjectIdeaUI {
 
   resetAllData() {
     this.service.projects = this.buildSeedProjects();
+    this.service.normalizePinnedOrder();
     this.service.persist();
     this.setSeedState(this.dataSource, true, { skipPersist: true });
     if (this.dataSource === "localDevice") {
@@ -4446,6 +4555,18 @@ class ProjectIdeaUI {
         const projectId = card.dataset.id;
         const action = actionButton.dataset.action;
 
+        if (action === "pin-project") {
+          const project = this.service.findProject(projectId);
+          const nextPinned = !project.pinned;
+          this.service.toggleProjectPin(projectId);
+          this.pushNotification({
+            title: nextPinned ? "Project pinned" : "Project unpinned",
+            message: project.name,
+            tone: "info",
+          });
+          this.render();
+          return;
+        }
         if (action === "edit-project") {
           const project = this.service.findProject(projectId);
           this.openEditDialog({
@@ -4561,6 +4682,18 @@ class ProjectIdeaUI {
       if (!ideaId) return;
       const action = button.dataset.action;
 
+      if (action === "pin-idea") {
+        const idea = this.service.findIdea(this.activeProjectId, ideaId);
+        const nextPinned = !idea.pinned;
+        this.service.toggleIdeaPin(this.activeProjectId, ideaId);
+        this.pushNotification({
+          title: nextPinned ? "Idea pinned" : "Idea unpinned",
+          message: idea.text,
+          tone: "info",
+        });
+        this.render();
+        return;
+      }
       if (action === "toggle") {
         const idea = this.service.findIdea(this.activeProjectId, ideaId);
         if (idea.done) {
@@ -5467,13 +5600,13 @@ class ProjectIdeaUI {
   }
 
   filterIdeas(ideas) {
+    let filtered = ideas;
     if (this.ideaFilter === "done") {
-      return ideas.filter((idea) => idea.done);
+      filtered = ideas.filter((idea) => idea.done);
+    } else if (this.ideaFilter === "todo") {
+      filtered = ideas.filter((idea) => !idea.done);
     }
-    if (this.ideaFilter === "all") {
-      return ideas;
-    }
-    return ideas.filter((idea) => !idea.done);
+    return reorderPinnedFirst(filtered);
   }
 
   getIdeasEmptyMessage() {
@@ -5519,6 +5652,8 @@ class ProjectIdeaUI {
       const liveIndicator = hasOpenIdeas
         ? '<span class="project-live" aria-hidden="true"></span>'
         : "";
+      const pinLabel = project.pinned ? "Unpin project" : "Pin project";
+      const pinIcon = project.pinned ? ICONS.pinOff : ICONS.pin;
       const categoryMarkup = project.category
         ? `<span class="project-category project-category-${project.category.toLowerCase()}">${escapeHtml(project.category)}</span>`
         : "";
@@ -5531,18 +5666,25 @@ class ProjectIdeaUI {
       if (project.id === this.activeProjectId) {
         card.classList.add("active");
       }
+      if (project.pinned) {
+        card.classList.add("is-pinned");
+      }
       card.dataset.id = project.id;
       card.innerHTML = `
         <div class="project-card-header">
-          ${categoryMarkup}
           <div class="project-title-block">
             <div class="project-title-row">
+              ${categoryMarkup}
               <h3>${escapeHtml(project.name)}</h3>
               ${liveIndicator}
             </div>
             ${descriptionMarkup}
           </div>
           <div class="project-actions">
+            <button class="icon-button pin-button${project.pinned ? " is-active" : ""}" type="button" data-action="pin-project" aria-pressed="${project.pinned}" aria-label="${pinLabel}" title="${pinLabel}">
+              ${pinIcon}
+              <span class="sr-only">${pinLabel}</span>
+            </button>
             <button class="icon-button" type="button" data-action="edit-project" aria-label="Edit project" title="Edit project">
               ${ICONS.edit}
               <span class="sr-only">Edit</span>
@@ -5613,11 +5755,14 @@ class ProjectIdeaUI {
       }
       item.draggable = true;
       if (idea.done) item.classList.add("completed");
+      if (idea.pinned) item.classList.add("is-pinned");
       item.dataset.id = idea.id;
       const finishedLabel = idea.done && idea.finishedAt ? formatDate(idea.finishedAt) : "";
       const createdLabel = formatDate(idea.createdAt);
       const toggleLabel = idea.done ? "Reopen" : "Mark complete";
       const toggleIcon = idea.done ? ICONS.reopen : ICONS.check;
+      const pinLabel = idea.pinned ? "Unpin idea" : "Pin idea";
+      const pinIcon = idea.pinned ? ICONS.pinOff : ICONS.pin;
       item.innerHTML = `
         <span class="idea-text">
           <span class="idea-title">${escapeHtml(idea.text)}</span>
@@ -5625,6 +5770,10 @@ class ProjectIdeaUI {
           ${finishedLabel ? `<small>${ICONS.checkCircleMini}${finishedLabel}</small>` : ""}
         </span>
         <div class="idea-actions">
+          <button class="icon-button pin-button${idea.pinned ? " is-active" : ""}" type="button" data-action="pin-idea" aria-pressed="${idea.pinned}" aria-label="${pinLabel}" title="${pinLabel}">
+            ${pinIcon}
+            <span class="sr-only">${pinLabel}</span>
+          </button>
           <button class="icon-button toggle-button" type="button" data-action="toggle" aria-pressed="${idea.done}" aria-label="${toggleLabel}" title="${toggleLabel}">
             ${toggleIcon}
             <span class="sr-only">${toggleLabel}</span>

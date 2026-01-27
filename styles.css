@@ -592,6 +592,11 @@ button:hover {
   transition: border-color 0.2s ease, transform 0.2s ease;
 }
 
+.project-card.is-pinned {
+  border-color: rgba(31, 138, 112, 0.75);
+  box-shadow: 0 14px 26px rgba(13, 27, 42, 0.12);
+}
+
 .project-card-header {
   display: block;
 }
@@ -674,6 +679,18 @@ button:hover {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
+}
+
+.project-card.is-pinned .project-actions {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.project-card.is-pinned:not(:hover):not(:focus-within)
+  .project-actions
+  button:not([data-action="pin-project"]) {
+  display: none;
 }
 
 .project-card h3 {
@@ -986,6 +1003,11 @@ button:hover {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.idea-item.is-pinned {
+  border-color: rgba(31, 138, 112, 0.75);
+  box-shadow: 0 12px 22px rgba(13, 27, 42, 0.1);
+}
+
 .idea-item:hover,
 .idea-item:focus-within {
   border-color: rgba(31, 138, 112, 0.6);
@@ -1051,12 +1073,30 @@ button:hover {
   transform: translateY(-50%) translateX(0);
 }
 
+.idea-item.is-pinned .idea-actions {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-50%) translateX(0);
+}
+
+.idea-item.is-pinned:not(:hover):not(:focus-within)
+  .idea-actions
+  button:not([data-action="pin-idea"]) {
+  display: none;
+}
+
 .icon-button {
   padding: 6px 10px;
   border-radius: 999px;
   background: var(--surface-2);
   color: var(--ink);
   font-size: 12px;
+}
+
+.pin-button.is-active {
+  color: var(--accent);
+  background: rgba(31, 138, 112, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(31, 138, 112, 0.22);
 }
 
 .icon-button:disabled {
@@ -2568,15 +2608,15 @@ button:hover {
 
 /* Project card category badge */
 .project-category {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  padding: 4px 10px;
+  position: static;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 2px 8px;
   font-size: 11px;
   font-weight: 600;
-  border-radius: 6px;
-  z-index: 1;
-  transition: opacity 0.2s ease;
+  border-radius: 999px;
+  line-height: 1.4;
 }
 
 .project-category-ci {
@@ -2596,13 +2636,6 @@ button:hover {
 .project-category-sp {
   background: rgba(91, 100, 115, 0.15);
   color: var(--muted);
-}
-
-/* Fade out on hover to reveal action buttons */
-.project-card:hover .project-category,
-.project-card:focus-within .project-category {
-  opacity: 0;
-  pointer-events: none;
 }
 
 /* Gantt timeline category tag */
