@@ -1,0 +1,26 @@
+{
+  "name": "project-idea-studio-video",
+  "version": "1.0.0",
+  "description": "Introduction video for Project Idea Studio",
+  "scripts": {
+    "start": "remotion studio",
+    "build": "remotion render ProjectIdeaStudioIntro out/intro.mp4",
+    "upgrade": "remotion upgrade"
+  },
+  "keywords": [],
+  "author": "Brian Li",
+  "license": "ISC",
+  "dependencies": {
+    "@remotion/bundler": "^4.0.410",
+    "@remotion/cli": "^4.0.410",
+    "@remotion/transitions": "^4.0.410",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "remotion": "^4.0.410"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.10",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.9.3"
+  }
+}
