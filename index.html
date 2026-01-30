@@ -15,9 +15,18 @@
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="https://unpkg.com/cal-heatmap/dist/cal-heatmap.min.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/cal-heatmap/dist/cal-heatmap.css">
-  <link rel="stylesheet" href="styles.css?v=20260130053400" />
+  <link rel="stylesheet" href="styles.css?v=20260130154025" />
 </head>
 <body>
+  <div id="splashOverlay" class="splash-overlay hidden">
+    <div class="splash-container">
+      <video id="splashVideo" class="splash-video" autoplay muted playsinline>
+        <source src="assets/intro.mp4" type="video/mp4">
+      </video>
+      <button id="splashSkip" class="splash-skip" type="button">Skip</button>
+    </div>
+  </div>
+
   <canvas id="bgCanvas" aria-hidden="true"></canvas>
   <div class="app-shell">
     <header class="topbar">
@@ -449,14 +458,47 @@
       </div>
       <div class="settings-body">
         <div class="settings-menu" role="tablist" aria-label="Settings sections">
-          <button class="settings-tab is-active" type="button" data-panel="data" aria-pressed="true">Data</button>
+          <button class="settings-tab is-active" type="button" data-panel="general" aria-pressed="true">General</button>
+          <button class="settings-tab" type="button" data-panel="data" aria-pressed="false">Data</button>
           <button class="settings-tab" type="button" data-panel="idea" aria-pressed="false">Idea</button>
           <button class="settings-tab" type="button" data-panel="proxy" aria-pressed="false">Proxy</button>
           <button class="settings-tab" type="button" data-panel="theme" aria-pressed="false">Theme</button>
           <button class="settings-tab" type="button" data-panel="system" aria-pressed="false">System</button>
         </div>
         <div class="settings-content">
-          <section class="settings-panel is-active" data-panel="data" aria-hidden="false">
+          <section class="settings-panel is-active" data-panel="general" aria-hidden="false">
+            <div class="settings-section">
+              <div class="settings-row">
+                <div>
+                  <h4>Intro video</h4>
+                  <p class="settings-help">Play the intro splash video.</p>
+                </div>
+                <div class="settings-actions">
+                  <button id="settingsReplaySplash" class="ghost" type="button">Replay</button>
+                </div>
+              </div>
+            </div>
+            <div class="settings-section">
+              <h4>Splash screen behavior</h4>
+              <div class="settings-options">
+                <label class="settings-option">
+                  <input type="radio" name="splashMode" value="first" checked />
+                  <div>
+                    <span class="option-title">First time only</span>
+                    <span class="option-note">Show intro video only on first visit.</span>
+                  </div>
+                </label>
+                <label class="settings-option">
+                  <input type="radio" name="splashMode" value="always" />
+                  <div>
+                    <span class="option-title">Every visit</span>
+                    <span class="option-note">Show intro video each time you open the app.</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </section>
+          <section class="settings-panel" data-panel="data" aria-hidden="true">
             <div class="settings-section">
               <div class="settings-row">
                 <div>
@@ -702,6 +744,6 @@
     </div>
   </dialog>
 
-  <script src="app.js?v=20260130053400"></script>
+  <script src="app.js?v=20260130154025"></script>
 </body>
 </html>

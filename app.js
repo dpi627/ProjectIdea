@@ -2,7 +2,7 @@ const STORAGE_KEY = "project-idea-collection.v1";
 const THEME_KEY = "project-idea-collection.theme";
 const UI_STATE_KEY = "project-idea-collection.ui";
 const LOCAL_FILE_NAME = "project-ideas.json";
-const APP_VERSION = "20260130053400";
+const APP_VERSION = "20260130154025";
 const DEFAULT_UPDATE_CHECK_INTERVAL_MS = 60_000;
 const MIN_UPDATE_CHECK_INTERVAL_MS = 10_000;
 const MAX_UPDATE_CHECK_INTERVAL_MS = 3_600_000;
@@ -1403,6 +1403,13 @@ class ProjectIdeaUI {
     this.dataSourceSelector = document.getElementById("dataSourceSelector");
     this.dataSourceStatus = document.getElementById("dataSourceStatus");
     this.settingsResetData = document.getElementById("settingsResetData");
+    this.settingsReplaySplash = document.getElementById("settingsReplaySplash");
+    this.settingsSplashModeOptions = Array.from(
+      document.querySelectorAll('input[name="splashMode"]')
+    );
+    this.splashOverlay = document.getElementById("splashOverlay");
+    this.splashVideo = document.getElementById("splashVideo");
+    this.splashSkip = document.getElementById("splashSkip");
     this.dataSourceDialog = document.getElementById("dataSourceDialog");
     this.dataSourceForm = document.getElementById("dataSourceForm");
     this.dataSourceCancel = document.getElementById("dataSourceCancel");
@@ -1528,6 +1535,8 @@ class ProjectIdeaUI {
     this.serviceMonitorStatus = "checking";
     this.notifyLimit = 4;
     this.notifyDuration = 3200;
+    this.splashMode = uiState.splashMode === "always" ? "always" : "first";
+    this.splashShownThisSession = false;
     this.dataSource = uiState.dataSource || "localStorage";
     this.fileSystemRepo = new FileSystemDataRepository();
     this.dataSourcePendingStrategy = null;
@@ -1547,6 +1556,7 @@ class ProjectIdeaUI {
 
     this.bindEvents();
     this.render();
+    this.initSplash();
   }
 
   loadUiState() {
@@ -1746,6 +1756,7 @@ class ProjectIdeaUI {
       dataSource: this.dataSource,
       seedState: this.seedState,
       techActiveTopicId: this.techActiveTopicId,
+      splashMode: this.splashMode,
     };
   }
 
@@ -4110,6 +4121,68 @@ class ProjectIdeaUI {
     this.startUpdateMonitor();
   }
 
+  // ===================== Splash Screen =====================
+
+  shouldShowSplash() {
+    if (this.splashShownThisSession) return false;
+    if (this.splashMode === "always") return true;
+    return !localStorage.getItem("project-idea-collection.splash-seen");
+  }
+
+  showSplash() {
+    if (!this.splashOverlay || !this.splashVideo) return;
+    this.splashShownThisSession = true;
+    this.splashOverlay.classList.remove("hidden", "fade-out");
+    this.splashVideo.currentTime = 0;
+    this.splashVideo.play().catch(() => {
+      this.hideSplash();
+    });
+  }
+
+  hideSplash() {
+    if (!this.splashOverlay) return;
+    this.splashOverlay.classList.add("fade-out");
+    localStorage.setItem("project-idea-collection.splash-seen", "true");
+    setTimeout(() => {
+      this.splashOverlay.classList.add("hidden");
+      if (this.splashVideo) {
+        this.splashVideo.pause();
+        this.splashVideo.currentTime = 0;
+      }
+    }, 400);
+  }
+
+  replaySplash() {
+    this.closeSettingsDialog();
+    setTimeout(() => {
+      this.splashShownThisSession = false;
+      this.showSplash();
+    }, 300);
+  }
+
+  setSplashMode(mode, { skipPersist = false } = {}) {
+    this.splashMode = mode === "always" ? "always" : "first";
+    if (!skipPersist) {
+      this.persistUiState();
+    }
+    this.syncSplashModeOptions();
+  }
+
+  syncSplashModeOptions() {
+    this.settingsSplashModeOptions.forEach((option) => {
+      option.checked = option.value === this.splashMode;
+    });
+  }
+
+  initSplash() {
+    this.syncSplashModeOptions();
+    if (this.shouldShowSplash()) {
+      this.showSplash();
+    }
+  }
+
+  // ===================== End Splash Screen =====================
+
   startUpdateMonitor() {
     if (this.updateTimer) {
       window.clearInterval(this.updateTimer);
@@ -5541,6 +5614,26 @@ class ProjectIdeaUI {
           this.resetAllData();
         },
       });
+    });
+
+    this.settingsReplaySplash?.addEventListener("click", () => {
+      this.replaySplash();
+    });
+
+    this.settingsSplashModeOptions.forEach((option) => {
+      option.addEventListener("change", (event) => {
+        const target = event.target;
+        if (!target || !target.value) return;
+        this.setSplashMode(target.value);
+      });
+    });
+
+    this.splashVideo?.addEventListener("ended", () => {
+      this.hideSplash();
+    });
+
+    this.splashSkip?.addEventListener("click", () => {
+      this.hideSplash();
     });
 
     this.dataSourceForm?.addEventListener("submit", (event) => {
