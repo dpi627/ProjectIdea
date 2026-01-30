@@ -2,12 +2,14 @@ const STORAGE_KEY = "project-idea-collection.v1";
 const THEME_KEY = "project-idea-collection.theme";
 const UI_STATE_KEY = "project-idea-collection.ui";
 const LOCAL_FILE_NAME = "project-ideas.json";
-const APP_VERSION = "20260127155339";
+const APP_VERSION = "20260130053400";
 const DEFAULT_UPDATE_CHECK_INTERVAL_MS = 60_000;
 const MIN_UPDATE_CHECK_INTERVAL_MS = 10_000;
 const MAX_UPDATE_CHECK_INTERVAL_MS = 3_600_000;
 const CHART_JS_SRC =
   "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js";
+const HTML2CANVAS_SRC =
+  "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
 const PRISM_VERSION = "1.29.0";
 const PRISM_THEME_HREF =
   `https://cdn.jsdelivr.net/npm/prismjs@${PRISM_VERSION}/themes/prism-tomorrow.min.css`;
@@ -306,13 +308,20 @@ class Project {
   localStorageRepo: String.raw`class LocalStorageProjectRepository {
   constructor(storageKey) {
     this.storageKey = storageKey;
+    this.COMPRESSED_PREFIX = "lz:";
   }
 
   load() {
     const raw = localStorage.getItem(this.storageKey);
     if (!raw) return [];
     try {
-      const parsed = JSON.parse(raw);
+      let jsonStr = raw;
+      // Detect and decompress lz-string data
+      if (raw.startsWith(this.COMPRESSED_PREFIX)) {
+        const compressed = raw.slice(this.COMPRESSED_PREFIX.length);
+        jsonStr = LZString.decompressFromUTF16(compressed);
+      }
+      const parsed = JSON.parse(jsonStr);
       return parsed.map((project) => new Project(project));
     } catch (error) {
       console.warn("Failed to parse stored data", error);
@@ -322,7 +331,14 @@ class Project {
 
   save(projects) {
     const payload = serializeProjects(projects);
-    localStorage.setItem(this.storageKey, JSON.stringify(payload));
+    const jsonStr = JSON.stringify(payload);
+    // Compress with lz-string if available
+    if (typeof LZString !== "undefined") {
+      const compressed = LZString.compressToUTF16(jsonStr);
+      localStorage.setItem(this.storageKey, this.COMPRESSED_PREFIX + compressed);
+    } else {
+      localStorage.setItem(this.storageKey, jsonStr);
+    }
   }
 }`,
   fileSystemRepo: String.raw`async openDatabase() {
@@ -562,13 +578,24 @@ class Project {
 class LocalStorageProjectRepository {
   constructor(storageKey) {
     this.storageKey = storageKey;
+    this.COMPRESSED_PREFIX = "lz:";
   }
 
   load() {
     const raw = localStorage.getItem(this.storageKey);
     if (!raw) return [];
     try {
-      const parsed = JSON.parse(raw);
+      let jsonStr = raw;
+      // Detect and decompress lz-string data
+      if (raw.startsWith(this.COMPRESSED_PREFIX)) {
+        const compressed = raw.slice(this.COMPRESSED_PREFIX.length);
+        jsonStr = LZString.decompressFromUTF16(compressed);
+        if (!jsonStr) {
+          console.warn("Failed to decompress data, trying raw");
+          jsonStr = raw;
+        }
+      }
+      const parsed = JSON.parse(jsonStr);
       return parsed.map((project) => new Project(project));
     } catch (error) {
       console.warn("Failed to parse stored data", error);
@@ -578,7 +605,14 @@ class LocalStorageProjectRepository {
 
   save(projects) {
     const payload = serializeProjects(projects);
-    localStorage.setItem(this.storageKey, JSON.stringify(payload));
+    const jsonStr = JSON.stringify(payload);
+    // Compress with lz-string if available
+    if (typeof LZString !== "undefined") {
+      const compressed = LZString.compressToUTF16(jsonStr);
+      localStorage.setItem(this.storageKey, this.COMPRESSED_PREFIX + compressed);
+    } else {
+      localStorage.setItem(this.storageKey, jsonStr);
+    }
   }
 }
 
@@ -830,6 +864,23 @@ class ProjectService {
     return entries.sort(
       (a, b) => new Date(b.idea.finishedAt) - new Date(a.idea.finishedAt)
     );
+  }
+
+  getHeatmapData() {
+    const entries = this.getFinishedLog();
+    const countByDate = {};
+
+    entries.forEach(({ idea }) => {
+      if (!idea.finishedAt) return;
+      const date = new Date(idea.finishedAt);
+      const dateKey = date.toISOString().split('T')[0];
+      countByDate[dateKey] = (countByDate[dateKey] || 0) + 1;
+    });
+
+    return Object.entries(countByDate).map(([date, value]) => ({
+      date,
+      value
+    }));
   }
 
   createProject(name, description = "") {
@@ -1289,6 +1340,10 @@ class ProjectIdeaUI {
     this.isTopbarSticky = false;
     this.logPanel = document.querySelector(".log-panel");
     this.logViewAll = document.getElementById("logViewAll");
+    this.heatmapInstance = null;
+    this.heatmapContainer = document.getElementById("finishedHeatmap");
+    this.heatmapResizeDebounceTimer = null;
+    this.heatmapLastWidth = window.innerWidth;
     this.footerFeatures = document.getElementById("footerFeatures");
     this.logDialog = document.getElementById("logDialog");
     this.logDialogClose = document.getElementById("logDialogClose");
@@ -1305,6 +1360,8 @@ class ProjectIdeaUI {
     this.logChart = document.getElementById("logChart");
     this.logPieChart = document.getElementById("logPieChart");
     this.logChartNote = document.querySelector(".log-dialog-chart .chart-note");
+    this.logDialogHeatmapContainer = document.getElementById("logDialogHeatmap");
+    this.logDialogHeatmapInstance = null;
     this.serviceMonitorButton = document.getElementById("serviceMonitor");
     this.limitsDialog = document.getElementById("limitsDialog");
     this.limitsClose = document.getElementById("limitsClose");
@@ -1359,6 +1416,7 @@ class ProjectIdeaUI {
     this.ganttTotalCount = document.getElementById("ganttTotalCount");
     this.ganttCategoryFilter = new Set(GANTT_CATEGORY_OPTIONS);
     this.ganttClose = document.getElementById("ganttClose");
+    this.ganttExport = document.getElementById("ganttExport");
     this.ganttActionFrame = null;
     this.techDialog = document.getElementById("techDialog");
     this.techClose = document.getElementById("techClose");
@@ -2291,6 +2349,46 @@ class ProjectIdeaUI {
       script.onerror = () => reject(new Error(src));
       document.head.appendChild(script);
     });
+  }
+
+  ensureHtml2Canvas() {
+    if (typeof window.html2canvas !== "undefined") {
+      return Promise.resolve(window.html2canvas);
+    }
+    if (this.html2canvasPromise) {
+      return this.html2canvasPromise;
+    }
+    this.html2canvasPromise = this.loadPrismScript(HTML2CANVAS_SRC)
+      .then(() => window.html2canvas)
+      .catch(() => {
+        this.html2canvasPromise = null;
+        return null;
+      });
+    return this.html2canvasPromise;
+  }
+
+  async exportElementAsImage(element, filename = "export") {
+    const html2canvas = await this.ensureHtml2Canvas();
+    if (!html2canvas) {
+      this.notify("Failed to load export library", "error");
+      return;
+    }
+    try {
+      const canvas = await html2canvas(element, {
+        backgroundColor: getComputedStyle(element).backgroundColor || "#1a1a2e",
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+      const link = document.createElement("a");
+      link.download = `${filename}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      this.notify("Image exported successfully", "success");
+    } catch (error) {
+      console.error("Export failed:", error);
+      this.notify("Failed to export image", "error");
+    }
   }
 
   ensurePrism() {
@@ -3419,6 +3517,7 @@ class ProjectIdeaUI {
         this.resizeLogChart();
         this.renderLogDialogChart();
       });
+      this.renderLogDialogHeatmap();
     });
   }
 
@@ -3495,6 +3594,7 @@ class ProjectIdeaUI {
     this.renderMoreLogDialogItems();
     this.updateLogDialogEmptyState();
     this.renderLogDialogChart();
+    this.renderLogDialogHeatmap();
   }
 
   updateLogDialogEmptyState() {
@@ -4667,6 +4767,10 @@ class ProjectIdeaUI {
   }
 
   bindEvents() {
+    window.addEventListener("resize", () => {
+      this.handleHeatmapResize();
+    });
+
     this.dialogs.forEach((dialog) => {
       dialog.addEventListener("close", () => {
         this.syncNotifyLayer();
@@ -4947,8 +5051,10 @@ class ProjectIdeaUI {
       const theme = this.themeService.toggle();
       this.updateThemeLabel(theme);
       this.background.updatePalette();
+      this.renderHeatmap();
       if (this.logDialog.open || this.logDialog.hasAttribute("open")) {
         this.renderLogDialogChart();
+        this.renderLogDialogHeatmap();
       }
       if (this.techDialog?.open || this.techDialog?.hasAttribute("open")) {
         this.highlightTechCode();
@@ -4965,6 +5071,14 @@ class ProjectIdeaUI {
 
     this.ganttClose?.addEventListener("click", () => {
       this.ganttDialog.close();
+    });
+
+    this.ganttExport?.addEventListener("click", () => {
+      const ganttCard = this.ganttDialog?.querySelector(".gantt-card");
+      if (ganttCard) {
+        const year = this.ganttRange?.value || new Date().getFullYear();
+        this.exportElementAsImage(ganttCard, `gantt-timeline-${year}`);
+      }
     });
 
     this.ganttRange?.addEventListener("change", () => {
@@ -5133,6 +5247,7 @@ class ProjectIdeaUI {
     });
 
     window.addEventListener("resize", () => {
+      this.handleHeatmapResize();
       if (this.logDialog.open || this.logDialog.hasAttribute("open")) {
         this.resizeLogChart();
         this.renderLogDialogChart();
@@ -6056,6 +6171,99 @@ class ProjectIdeaUI {
       `;
       this.logList.appendChild(item);
     });
+    this.renderHeatmap();
+  }
+
+  calculateHeatmapMonths(containerWidth) {
+    const monthWidth = 150;
+    const minMonths = 2;
+    const maxMonths = 6;
+    const months = Math.floor(containerWidth / monthWidth);
+    return Math.max(minMonths, Math.min(maxMonths, months));
+  }
+
+  handleHeatmapResize() {
+    // Heatmaps are now fixed at 4 and 6 months respectively, no need to re-render on resize
+  }
+
+  renderHeatmap() {
+    if (!this.heatmapContainer || typeof CalHeatmap === 'undefined') return;
+
+    if (this.heatmapInstance) {
+      this.heatmapInstance.destroy();
+    }
+
+    const data = this.service.getHeatmapData();
+    const isDark = document.documentElement.dataset.theme === 'dark';
+    const range = 4;
+    const startOffset = range * 30;
+
+    const cal = new CalHeatmap();
+    cal.paint({
+      data: { source: data, x: 'date', y: 'value' },
+      date: { start: new Date(Date.now() - startOffset * 24 * 60 * 60 * 1000) },
+      range: range,
+      scale: {
+        color: {
+          type: 'threshold',
+          range: isDark
+            ? ['#1a2f3a', '#1f8a70', '#2aa37a', '#33c1a0']
+            : ['#ebedf0', '#1f8a70', '#2aa37a', '#0f6f57'],
+          domain: [1, 3, 5]
+        }
+      },
+      domain: { type: 'month', gutter: 4, label: { text: 'MMM', textAlign: 'start', position: 'top' } },
+      subDomain: { type: 'day', radius: 2, width: 10, height: 10, gutter: 2 },
+      itemSelector: '#finishedHeatmap'
+    });
+
+    this.heatmapInstance = cal;
+  }
+
+  renderLogDialogHeatmap() {
+    if (!this.logDialogHeatmapContainer || typeof CalHeatmap === 'undefined') return;
+
+    if (this.logDialogHeatmapInstance) {
+      this.logDialogHeatmapInstance.destroy();
+    }
+
+    const data = this.logDialogEntries.map(({ idea }) => ({
+      date: idea.finishedAt,
+      value: 1
+    }));
+
+    const aggregated = {};
+    data.forEach(({ date }) => {
+      const d = new Date(date);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      aggregated[key] = (aggregated[key] || 0) + 1;
+    });
+    const heatmapData = Object.entries(aggregated).map(([date, value]) => ({ date, value }));
+
+    const isDark = document.documentElement.dataset.theme === 'dark';
+    const range = 6;
+    const startOffset = range * 30;
+
+    const cal = new CalHeatmap();
+    cal.paint({
+      data: { source: heatmapData, x: 'date', y: 'value' },
+      date: { start: new Date(Date.now() - startOffset * 24 * 60 * 60 * 1000) },
+      range: range,
+      scale: {
+        color: {
+          type: 'threshold',
+          range: isDark
+            ? ['#1a2f3a', '#1f8a70', '#2aa37a', '#33c1a0']
+            : ['#ebedf0', '#1f8a70', '#2aa37a', '#0f6f57'],
+          domain: [1, 3, 5]
+        }
+      },
+      domain: { type: 'month', gutter: 4, label: { text: 'MMM', textAlign: 'start', position: 'top' } },
+      subDomain: { type: 'day', radius: 2, width: 10, height: 10, gutter: 2 },
+      itemSelector: '#logDialogHeatmap'
+    });
+
+    this.logDialogHeatmapInstance = cal;
   }
 }
 

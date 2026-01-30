@@ -11,7 +11,11 @@
     href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMxZjhhNzAiLz48cG9seWdvbiBwb2ludHM9IjMyIDEwIDU0IDMyIDMyIDU0IDEwIDMyIiBmaWxsPSIjZmZmZmZmIi8+PC9zdmc+"
   />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-  <link rel="stylesheet" href="styles.css?v=20260127155339" />
+  <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://unpkg.com/cal-heatmap/dist/cal-heatmap.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/cal-heatmap/dist/cal-heatmap.css">
+  <link rel="stylesheet" href="styles.css?v=20260130053400" />
 </head>
 <body>
   <canvas id="bgCanvas" aria-hidden="true"></canvas>
@@ -129,10 +133,13 @@
       <!-- section finished ideas panel -->
       <aside class="panel log-panel">
         <div class="panel-header">
-          <div>
-            <p class="eyebrow">Session log</p>
-            <h2>Finished ideas</h2>
+          <div class="log-header-top">
+            <div class="log-title-block">
+              <p class="eyebrow">Session log</p>
+              <h2>Finished ideas</h2>
+            </div>
           </div>
+          <div id="finishedHeatmap" class="finished-heatmap"></div>
           <label class="log-filter inline-form">
             <span class="sr-only">Search finished ideas</span>
             <input id="logFilter" type="text" placeholder="Search ideas or projects..." />
@@ -396,6 +403,7 @@
           <select id="ganttRange" aria-label="Display year">
             <!-- Options generated dynamically -->
           </select>
+          <button id="ganttExport" class="ghost" type="button">Export</button>
           <button id="ganttClose" class="ghost" type="button">Close</button>
         </div>
       </div>
@@ -684,12 +692,16 @@
               <canvas id="logPieChart" role="img" aria-label="Completed ideas by project chart"></canvas>
             </div>
           </section>
+          <section class="chart-section">
+            <p class="chart-subtitle">Activity heatmap</p>
+            <div id="logDialogHeatmap" class="log-dialog-heatmap"></div>
+          </section>
           <p class="chart-note">Updates with your filters.</p>
         </aside>
       </div>
     </div>
   </dialog>
 
-  <script src="app.js?v=20260127155339"></script>
+  <script src="app.js?v=20260130053400"></script>
 </body>
 </html>
