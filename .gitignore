@@ -1,5 +1,5 @@
 # CLAUDE
-**/*.local.*
+.claude/
 nul
 
 # IDE - Visual Studio Code
