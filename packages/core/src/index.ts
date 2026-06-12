@@ -529,3 +529,56 @@ export const moveIdea = (
     ideas: workspace.ideas.map((idea) => byId.get(idea.id) || idea),
   }, timestamp);
 };
+
+const reorderTo = <T extends { id: string; order: number; updatedAt: string }>(
+  items: T[],
+  itemId: string,
+  targetId: string,
+  timestamp: string
+) => {
+  const fromIndex = items.findIndex((item) => item.id === itemId);
+  const toIndex = items.findIndex((item) => item.id === targetId);
+  if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return items;
+  const next = [...items];
+  const [moved] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, moved);
+  return next.map((item, order) => ({
+    ...item,
+    order,
+    updatedAt:
+      item.order !== order || item.id === itemId ? timestamp : item.updatedAt,
+  }));
+};
+
+export const moveProjectTo = (
+  workspace: WorkspaceData,
+  projectId: string,
+  targetProjectId: string
+) => {
+  const timestamp = nowIso();
+  const visible = getVisibleProjects(workspace);
+  const reordered = reorderTo(visible, projectId, targetProjectId, timestamp);
+  if (reordered === visible) return workspace;
+  const byId = new Map(reordered.map((project) => [project.id, project]));
+  return touchWorkspace({
+    ...workspace,
+    projects: workspace.projects.map((project) => byId.get(project.id) || project),
+  }, timestamp);
+};
+
+export const moveIdeaTo = (
+  workspace: WorkspaceData,
+  projectId: string,
+  ideaId: string,
+  targetIdeaId: string
+) => {
+  const timestamp = nowIso();
+  const visible = getIdeasForProject(workspace, projectId);
+  const reordered = reorderTo(visible, ideaId, targetIdeaId, timestamp);
+  if (reordered === visible) return workspace;
+  const byId = new Map(reordered.map((idea) => [idea.id, idea]));
+  return touchWorkspace({
+    ...workspace,
+    ideas: workspace.ideas.map((idea) => byId.get(idea.id) || idea),
+  }, timestamp);
+};

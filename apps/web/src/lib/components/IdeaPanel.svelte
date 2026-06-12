@@ -25,6 +25,7 @@
   import {
     addIdea,
     app,
+    dropIdeaOn,
     getWorkspace,
     nudgeIdea,
     removeIdea,
@@ -70,6 +71,14 @@
   let newIdeaText = $state("");
   let editingIdeaId: string | null = $state(null);
   let editingIdeaText = $state("");
+
+  let dragIdeaId: string | null = $state(null);
+  let dragOverIdeaId: string | null = $state(null);
+
+  const resetDrag = () => {
+    dragIdeaId = null;
+    dragOverIdeaId = null;
+  };
 
   const submitIdea = async (event: SubmitEvent) => {
     event.preventDefault();
@@ -196,9 +205,37 @@
           <article
             class="idea-card"
             class:done={idea.done}
+            class:dragging={dragIdeaId === idea.id}
+            class:drag-over={dragOverIdeaId === idea.id}
             data-anim="card"
+            draggable={editingIdeaId !== idea.id}
             animate:flip={{ duration: motionMs(220) }}
             transition:slide={{ duration: motionMs(180) }}
+            ondragstart={(event) => {
+              dragIdeaId = idea.id;
+              if (event.dataTransfer) {
+                event.dataTransfer.effectAllowed = "move";
+                event.dataTransfer.setData("text/plain", idea.id);
+              }
+            }}
+            ondragover={(event) => {
+              if (dragIdeaId && dragIdeaId !== idea.id) {
+                event.preventDefault();
+                if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+                dragOverIdeaId = idea.id;
+              }
+            }}
+            ondragleave={() => {
+              if (dragOverIdeaId === idea.id) dragOverIdeaId = null;
+            }}
+            ondrop={(event) => {
+              event.preventDefault();
+              if (activeProject && dragIdeaId && dragIdeaId !== idea.id) {
+                dropIdeaOn(activeProject.id, dragIdeaId, idea.id);
+              }
+              resetDrag();
+            }}
+            ondragend={resetDrag}
           >
             <button
               class="check-button"

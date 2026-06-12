@@ -13,6 +13,7 @@
   import { motionMs } from "../animations/entrance";
   import {
     app,
+    dropProjectOn,
     getWorkspace,
     nudgeProject,
     togglePinProject,
@@ -24,6 +25,14 @@
   const FILTERS: CategoryFilter[] = ["all", "CI", "MP", "SP", "NA"];
 
   const projects = $derived(getVisibleProjects(getWorkspace()));
+
+  let dragProjectId: string | null = $state(null);
+  let dragOverProjectId: string | null = $state(null);
+
+  const resetDrag = () => {
+    dragProjectId = null;
+    dragOverProjectId = null;
+  };
   const filteredProjects = $derived(
     projects.filter((project) => {
       if (ui.categoryFilter === "all") return true;
@@ -79,9 +88,37 @@
               <article
                 class="project-card"
                 class:active={app.activeProjectId === project.id}
+                class:dragging={dragProjectId === project.id}
+                class:drag-over={dragOverProjectId === project.id}
                 data-anim="card"
+                draggable="true"
                 animate:flip={{ duration: motionMs(240) }}
                 transition:fade={{ duration: motionMs(140) }}
+                ondragstart={(event) => {
+                  dragProjectId = project.id;
+                  if (event.dataTransfer) {
+                    event.dataTransfer.effectAllowed = "move";
+                    event.dataTransfer.setData("text/plain", project.id);
+                  }
+                }}
+                ondragover={(event) => {
+                  if (dragProjectId && dragProjectId !== project.id) {
+                    event.preventDefault();
+                    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+                    dragOverProjectId = project.id;
+                  }
+                }}
+                ondragleave={() => {
+                  if (dragOverProjectId === project.id) dragOverProjectId = null;
+                }}
+                ondrop={(event) => {
+                  event.preventDefault();
+                  if (dragProjectId && dragProjectId !== project.id) {
+                    dropProjectOn(dragProjectId, project.id);
+                  }
+                  resetDrag();
+                }}
+                ondragend={resetDrag}
               >
                 <button
                   class="project-select"

@@ -8,7 +8,9 @@ import {
   getVisibleProjects,
   importWorkspaceJson,
   moveIdea,
+  moveIdeaTo,
   moveProject,
+  moveProjectTo,
   toggleIdeaDone,
   toggleIdeaPin,
   toggleProjectPin,
@@ -166,6 +168,23 @@ export const nudgeIdea = async (
   delta: 1 | -1
 ) => {
   await persist(moveIdea(workspaceState, projectId, ideaId, delta));
+};
+
+export const dropProjectOn = async (
+  projectId: string,
+  targetProjectId: string
+) => {
+  const next = moveProjectTo(workspaceState, projectId, targetProjectId);
+  if (next !== workspaceState) await persist(next);
+};
+
+export const dropIdeaOn = async (
+  projectId: string,
+  ideaId: string,
+  targetIdeaId: string
+) => {
+  const next = moveIdeaTo(workspaceState, projectId, ideaId, targetIdeaId);
+  if (next !== workspaceState) await persist(next);
 };
 
 export const exportData = () => {

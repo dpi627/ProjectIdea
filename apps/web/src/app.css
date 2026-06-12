@@ -524,6 +524,25 @@ ul.scroll-list {
     var(--grad-border) border-box;
 }
 
+.project-card,
+.idea-card {
+  cursor: grab;
+}
+
+.project-card.dragging,
+.idea-card.dragging {
+  opacity: 0.45;
+  cursor: grabbing;
+}
+
+.project-card.drag-over,
+.idea-card.drag-over {
+  border-color: transparent;
+  background:
+    linear-gradient(var(--surface-2), var(--surface-2)) padding-box,
+    var(--grad-border) border-box;
+}
+
 .project-select {
   display: grid;
   gap: 7px;

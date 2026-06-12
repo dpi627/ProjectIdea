@@ -10,7 +10,9 @@ import {
   importLegacyProjects,
   importWorkspaceJson,
   moveIdea,
+  moveIdeaTo,
   moveProject,
+  moveProjectTo,
   toggleIdeaDone,
   toggleIdeaPin,
   toggleProjectPin,
@@ -105,6 +107,43 @@ assert(
 workspace = toggleProjectPin(workspace, projectResult.project.id);
 workspace = moveProject(workspace, projectResult.project.id, -1);
 workspace = moveIdea(workspace, projectResult.project.id, ideaResult.idea.id, -1);
+
+const dndProject = createProject(workspace, { name: "DnD", description: "" });
+workspace = dndProject.workspace;
+const dndIdeaIds: string[] = [];
+for (const text of ["one", "two", "three"]) {
+  const result = createIdea(workspace, dndProject.project.id, text);
+  workspace = result.workspace;
+  dndIdeaIds.push(result.idea.id);
+}
+
+const ideaTexts = () =>
+  getIdeasForProject(workspace, dndProject.project.id).map((idea) => idea.text).join(",");
+
+workspace = moveIdeaTo(workspace, dndProject.project.id, dndIdeaIds[0], dndIdeaIds[2]);
+assert(ideaTexts() === "two,three,one", "moveIdeaTo should drop the idea at the target position");
+
+workspace = moveIdeaTo(workspace, dndProject.project.id, dndIdeaIds[0], dndIdeaIds[1]);
+assert(ideaTexts() === "one,two,three", "moveIdeaTo should move an idea backwards");
+
+const noop = moveIdeaTo(workspace, dndProject.project.id, dndIdeaIds[0], dndIdeaIds[0]);
+assert(noop === workspace, "moveIdeaTo onto itself should be a no-op");
+
+workspace = toggleIdeaPin(workspace, dndIdeaIds[2]);
+workspace = moveIdeaTo(workspace, dndProject.project.id, dndIdeaIds[0], dndIdeaIds[2]);
+assert(
+  ideaTexts() === "three,one,two",
+  "pinned ideas should stay on top after moveIdeaTo"
+);
+
+const dndProject2 = createProject(workspace, { name: "DnD2", description: "" });
+workspace = dndProject2.workspace;
+workspace = moveProjectTo(workspace, dndProject2.project.id, dndProject.project.id);
+const projectNames = getVisibleProjects(workspace).map((project) => project.name);
+assert(
+  projectNames.indexOf("DnD2") < projectNames.indexOf("DnD"),
+  "moveProjectTo should place the project before its target"
+);
 
 const exported = exportWorkspaceJson(workspace);
 const imported = importWorkspaceJson(exported, "smoke-device");
