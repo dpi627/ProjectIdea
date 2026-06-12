@@ -1,12 +1,7 @@
 <script lang="ts">
-  import { Database, History, RotateCcw, Upload } from "@lucide/svelte";
+  import { History, RotateCcw } from "@lucide/svelte";
   import { getCompletionLog } from "@ophan/core";
-  import {
-    app,
-    clearWorkspace,
-    getWorkspace,
-    importLegacy,
-  } from "../state/app.svelte";
+  import { getWorkspace, reopenIdea } from "../state/app.svelte";
   import { ui } from "../state/ui.svelte";
   import { formatDate } from "../utils/format";
 
@@ -15,47 +10,40 @@
 
 <aside class="insight-panel" aria-label="Completed ideas" inert={ui.logCollapsed}>
   <div class="log-inner">
-  <section class="sync-card">
-    <p class="eyebrow">Storage</p>
-    <h2><Database size={19} /> Local first</h2>
-    <p>
-      Saved in IndexedDB on this device. The repository boundary is ready
-      for a future Google Sheets adapter.
-    </p>
-    <div class="sync-actions">
-      {#if app.legacyAvailable}
-        <button class="ghost icon-button" type="button" onclick={importLegacy}>
-          <Upload size={16} />
-          <span>Import legacy static data</span>
-        </button>
-      {/if}
-      <button class="ghost icon-button" type="button" onclick={clearWorkspace}>
-        <RotateCcw size={16} />
-        <span>Clear local data</span>
-      </button>
-    </div>
-  </section>
-
-  <section class="log-card">
-    <div class="section-title">
-      <span><History size={16} /> Completion log</span>
-      <strong>{completionLog.length}</strong>
-    </div>
-    {#if completionLog.length === 0}
-      <div class="empty-state compact">
-        <p>No completed ideas yet.</p>
-        <span>Done items will appear here.</span>
+    <section class="panel fill">
+      <header class="panel-head">
+        <span class="panel-head-title">
+          <History size={16} />
+          Completed
+          <span class="panel-count">{completionLog.length}</span>
+        </span>
+      </header>
+      <div class="panel-body">
+        {#if completionLog.length === 0}
+          <div class="empty-state compact">
+            <p>No completed ideas yet.</p>
+            <span>Done items will appear here.</span>
+          </div>
+        {:else}
+          <ol class="scroll-list">
+            {#each completionLog as entry (entry.idea.id)}
+              <li class="log-item">
+                <p class="log-text">{entry.idea.text}</p>
+                <span class="log-meta">{entry.projectName} · {formatDate(entry.idea.finishedAt)}</span>
+                <button
+                  class="action-btn log-reopen"
+                  type="button"
+                  title="Reopen idea"
+                  onclick={() => reopenIdea(entry.idea.id)}
+                >
+                  <RotateCcw size={13} />
+                  <span class="sr-only">Reopen idea</span>
+                </button>
+              </li>
+            {/each}
+          </ol>
+        {/if}
       </div>
-    {:else}
-      <ol class="log-list">
-        {#each completionLog.slice(0, 12) as entry (entry.idea.id)}
-          <li>
-            <span>{entry.idea.text}</span>
-            <small>{entry.projectName} - {formatDate(entry.idea.finishedAt)}</small>
-          </li>
-        {/each}
-      </ol>
-    {/if}
-  </section>
+    </section>
   </div>
 </aside>

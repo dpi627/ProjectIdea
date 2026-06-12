@@ -2,7 +2,7 @@ const THEME_KEY = "ophan.theme";
 const UI_KEY = "ophan.ui";
 
 export type Theme = "light" | "dark";
-export type CategoryFilter = "all" | "CI" | "MP" | "SP";
+export type CategoryFilter = "all" | "CI" | "MP" | "SP" | "NA";
 
 const getBrowserStorage = () =>
   typeof localStorage === "undefined" ? null : localStorage;
@@ -16,7 +16,11 @@ export const ui = $state({
 });
 
 const isCategoryFilter = (value: unknown): value is CategoryFilter =>
-  value === "all" || value === "CI" || value === "MP" || value === "SP";
+  value === "all" ||
+  value === "CI" ||
+  value === "MP" ||
+  value === "SP" ||
+  value === "NA";
 
 const applyThemeToDocument = () => {
   document.documentElement.dataset.theme = ui.theme;

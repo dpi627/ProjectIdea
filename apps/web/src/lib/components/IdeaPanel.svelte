@@ -4,10 +4,8 @@
     ArrowUp,
     Check,
     Circle,
-    ListTodo,
     Pencil,
     Pin,
-    PinOff,
     Plus,
     Save,
     Trash2,
@@ -24,17 +22,22 @@
   import {
     addIdea,
     app,
-    emptyProjectDraft,
     getWorkspace,
     nudgeIdea,
     removeIdea,
     removeProject,
     saveIdeaText,
-    saveProject,
     toggleDone,
     togglePinIdea,
   } from "../state/app.svelte";
+  import {
+    openConfirm,
+    openProjectCreate,
+    openProjectEdit,
+  } from "../state/dialogs.svelte";
   import { formatDate } from "../utils/format";
+
+  const FILTERS: IdeaFilter[] = ["todo", "done", "all"];
 
   const workspace = $derived(getWorkspace());
   const projects = $derived(getVisibleProjects(workspace));
@@ -57,31 +60,12 @@
       : { total: 0, done: 0, todo: 0, percent: 0 }
   );
 
-  let formProjectId: string | null = $state(null);
-  let form = $state(emptyProjectDraft());
-
-  $effect(() => {
-    if (activeProject && activeProject.id !== formProjectId) {
-      formProjectId = activeProject.id;
-      form = {
-        name: activeProject.name,
-        description: activeProject.description,
-        category: activeProject.category || "",
-        startDate: activeProject.startDate || "",
-        dueDate: activeProject.dueDate || "",
-      };
-    }
-  });
+  const filterCount = (filter: IdeaFilter) =>
+    filter === "todo" ? stats.todo : filter === "done" ? stats.done : stats.total;
 
   let newIdeaText = $state("");
   let editingIdeaId: string | null = $state(null);
   let editingIdeaText = $state("");
-
-  const submitProject = async (event: SubmitEvent) => {
-    event.preventDefault();
-    if (!activeProject) return;
-    await saveProject(activeProject.id, { ...form });
-  };
 
   const submitIdea = async (event: SubmitEvent) => {
     event.preventDefault();
@@ -101,89 +85,96 @@
     editingIdeaId = null;
     editingIdeaText = "";
   };
+
+  const confirmDeleteProject = () => {
+    const project = activeProject;
+    if (!project) return;
+    openConfirm({
+      title: "Delete project?",
+      message: `"${project.name}" and all of its ideas will be removed.`,
+      confirmText: "Delete project",
+      onConfirm: () => removeProject(project.id),
+    });
+  };
 </script>
 
-<section class="focus-panel">
+<section class="focus-panel panel">
   {#if activeProject}
-    <div class="panel-header">
-      <div>
-        <p class="eyebrow">Focused project</p>
-        <h2>{activeProject.name}</h2>
+    <header class="focus-head">
+      <div class="focus-title-row">
+        <div class="focus-title">
+          <h2>{activeProject.name}</h2>
+          {#if activeProject.category}
+            <span class="category-badge">{activeProject.category}</span>
+          {/if}
+        </div>
+        <div class="focus-title-actions">
+          <button
+            class="action-btn"
+            type="button"
+            title="Edit project"
+            onclick={() => activeProject && openProjectEdit(activeProject.id)}
+          >
+            <Pencil size={14} />
+            <span class="sr-only">Edit project</span>
+          </button>
+          <button
+            class="action-btn is-danger"
+            type="button"
+            title="Delete project"
+            onclick={confirmDeleteProject}
+          >
+            <Trash2 size={14} />
+            <span class="sr-only">Delete project</span>
+          </button>
+        </div>
       </div>
-      <div class="progress-ring" style={`--progress:${stats.percent}%`}>
-        <span>{stats.percent}%</span>
+      {#if activeProject.description}
+        <p class="focus-desc">{activeProject.description}</p>
+      {/if}
+      {#if activeProject.startDate || activeProject.dueDate}
+        <div class="focus-sub">
+          {#if activeProject.startDate}
+            <span>Start <strong>{activeProject.startDate}</strong></span>
+          {/if}
+          {#if activeProject.dueDate}
+            <span>Due <strong>{activeProject.dueDate}</strong></span>
+          {/if}
+        </div>
+      {/if}
+      <div class="focus-progress">
+        <div class="progress-track">
+          <div class="progress-fill" style={`width:${stats.percent}%`}></div>
+        </div>
+        <span class="mono"><strong>{stats.percent}%</strong> · {stats.done}/{stats.total} done</span>
       </div>
-    </div>
+    </header>
 
-    <form class="project-editor" onsubmit={submitProject}>
-      <div class="editor-grid">
-        <label>
-          Name
-          <input bind:value={form.name} required />
-        </label>
-        <label>
-          Category
-          <select bind:value={form.category}>
-            <option value="">None</option>
-            <option value="CI">CI</option>
-            <option value="MP">MP</option>
-            <option value="SP">SP</option>
-          </select>
-        </label>
-        <label>
-          Start
-          <input bind:value={form.startDate} type="date" />
-        </label>
-        <label>
-          Due
-          <input bind:value={form.dueDate} type="date" />
-        </label>
-      </div>
-      <label>
-        Description
-        <textarea bind:value={form.description} rows="3"></textarea>
-      </label>
-      <div class="editor-actions">
-        <button class="primary icon-button" type="submit">
-          <Save size={17} />
-          <span>Save project</span>
-        </button>
-        <button
-          class="danger icon-button"
-          type="button"
-          onclick={() => activeProject && removeProject(activeProject.id)}
-        >
-          <Trash2 size={17} />
-          <span>Delete project</span>
-        </button>
-      </div>
-    </form>
-
-    <div class="idea-toolbar">
-      <form onsubmit={submitIdea}>
+    <div class="focus-tools">
+      <form class="idea-form" onsubmit={submitIdea}>
         <input bind:value={newIdeaText} placeholder="Capture an idea..." />
-        <button class="primary icon-button" type="submit">
-          <Plus size={17} />
-          <span>Add idea</span>
+        <button class="primary" type="submit">
+          <Plus size={16} />
+          <span>Add</span>
         </button>
       </form>
-      <div class="segmented" role="group" aria-label="Idea filter">
-        {#each ["todo", "done", "all"] as filter (filter)}
-          <button
-            class:active={app.ideaFilter === filter}
-            type="button"
-            onclick={() => (app.ideaFilter = filter as IdeaFilter)}
-          >
-            {#if filter === "todo"}<ListTodo size={15} />{/if}
-            {#if filter === "done"}<Check size={15} />{/if}
-            {#if filter === "all"}<Circle size={15} />{/if}
-            {filter}
-          </button>
-        {/each}
+      <div class="filter-row">
+        <div class="segmented" role="group" aria-label="Idea filter">
+          {#each FILTERS as filter (filter)}
+            <button
+              class:active={app.ideaFilter === filter}
+              type="button"
+              onclick={() => (app.ideaFilter = filter)}
+            >
+              {filter}
+              <span class="count">{filterCount(filter)}</span>
+            </button>
+          {/each}
+        </div>
       </div>
     </div>
 
-    <div class="idea-list">
+    <div class="idea-scroll">
       {#if ideas.length === 0}
         <div class="empty-state">
           <p>No ideas in this view.</p>
@@ -191,63 +182,94 @@
         </div>
       {:else}
         {#each ideas as idea, index (idea.id)}
-          <article class:done={idea.done} class="idea-card">
+          <article class="idea-card" class:done={idea.done}>
             <button
               class="check-button"
               type="button"
               aria-label={idea.done ? "Mark todo" : "Mark done"}
               onclick={() => toggleDone(idea.id)}
             >
-              {#if idea.done}<Check size={17} />{:else}<Circle size={17} />{/if}
+              {#if idea.done}<Check size={16} />{:else}<Circle size={16} />{/if}
             </button>
             <div class="idea-body">
               {#if editingIdeaId === idea.id}
                 <form class="idea-edit" onsubmit={(event) => submitIdeaEdit(event, idea.id)}>
                   <input bind:value={editingIdeaText} />
-                  <button class="icon-button" type="submit">
-                    <Save size={15} />
-                    <span>Save</span>
+                  <button class="action-btn" type="submit" title="Save">
+                    <Save size={14} />
+                    <span class="sr-only">Save</span>
                   </button>
-                  <button class="icon-button" type="button" onclick={() => (editingIdeaId = null)}>
-                    <X size={15} />
-                    <span>Cancel</span>
+                  <button
+                    class="action-btn"
+                    type="button"
+                    title="Cancel"
+                    onclick={() => (editingIdeaId = null)}
+                  >
+                    <X size={14} />
+                    <span class="sr-only">Cancel</span>
                   </button>
                 </form>
               {:else}
-                <p>{idea.text}</p>
-                <span>{idea.done ? `Finished ${formatDate(idea.finishedAt)}` : `Created ${formatDate(idea.createdAt)}`}</span>
+                <p class="idea-text">{idea.text}</p>
+                <span class="idea-stamp">
+                  {idea.done
+                    ? `Finished ${formatDate(idea.finishedAt)}`
+                    : `Created ${formatDate(idea.createdAt)}`}
+                </span>
               {/if}
             </div>
-            <div class="idea-actions">
-              <button type="button" onclick={() => togglePinIdea(idea.id)}>
-                {#if idea.pinned}<PinOff size={14} />{:else}<Pin size={14} />{/if}
-                <span>{idea.pinned ? "Unpin" : "Pin"}</span>
-              </button>
-              <button type="button" onclick={() => startEditingIdea(idea)}>
-                <Pencil size={14} />
-                <span>Edit</span>
-              </button>
-              <button
-                type="button"
-                disabled={index === 0}
-                onclick={() => activeProject && nudgeIdea(activeProject.id, idea.id, -1)}
-              >
-                <ArrowUp size={14} />
-                <span>Up</span>
-              </button>
-              <button
-                type="button"
-                disabled={index === ideas.length - 1}
-                onclick={() => activeProject && nudgeIdea(activeProject.id, idea.id, 1)}
-              >
-                <ArrowDown size={14} />
-                <span>Down</span>
-              </button>
-              <button class="danger-text" type="button" onclick={() => removeIdea(idea.id)}>
-                <Trash2 size={14} />
-                <span>Delete</span>
-              </button>
-            </div>
+            {#if editingIdeaId !== idea.id}
+              <div class="card-actions" aria-label="Idea actions">
+                <button
+                  class="action-btn"
+                  class:is-on={idea.pinned}
+                  type="button"
+                  title={idea.pinned ? "Unpin" : "Pin"}
+                  onclick={() => togglePinIdea(idea.id)}
+                >
+                  <Pin size={13} />
+                  <span class="sr-only">{idea.pinned ? "Unpin" : "Pin"}</span>
+                </button>
+                <button
+                  class="action-btn"
+                  type="button"
+                  title="Edit idea"
+                  onclick={() => startEditingIdea(idea)}
+                >
+                  <Pencil size={13} />
+                  <span class="sr-only">Edit idea</span>
+                </button>
+                <button
+                  class="action-btn"
+                  type="button"
+                  title="Move up"
+                  disabled={index === 0}
+                  onclick={() => activeProject && nudgeIdea(activeProject.id, idea.id, -1)}
+                >
+                  <ArrowUp size={13} />
+                  <span class="sr-only">Move up</span>
+                </button>
+                <button
+                  class="action-btn"
+                  type="button"
+                  title="Move down"
+                  disabled={index === ideas.length - 1}
+                  onclick={() => activeProject && nudgeIdea(activeProject.id, idea.id, 1)}
+                >
+                  <ArrowDown size={13} />
+                  <span class="sr-only">Move down</span>
+                </button>
+                <button
+                  class="action-btn is-danger"
+                  type="button"
+                  title="Delete idea"
+                  onclick={() => removeIdea(idea.id)}
+                >
+                  <Trash2 size={13} />
+                  <span class="sr-only">Delete idea</span>
+                </button>
+              </div>
+            {/if}
           </article>
         {/each}
       {/if}
@@ -256,6 +278,10 @@
     <div class="empty-state large">
       <p>Start with one project.</p>
       <span>Ophan keeps the workspace local first, ready for Google sync later.</span>
+      <button class="primary" type="button" onclick={openProjectCreate}>
+        <Plus size={16} />
+        <span>New project</span>
+      </button>
     </div>
   {/if}
 </section>

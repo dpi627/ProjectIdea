@@ -144,6 +144,10 @@ export const toggleDone = async (ideaId: string) => {
   await persist(toggleIdeaDone(workspaceState, ideaId));
 };
 
+export const reopenIdea = async (ideaId: string) => {
+  await persist(toggleIdeaDone(workspaceState, ideaId), "Idea reopened.");
+};
+
 export const togglePinProject = async (projectId: string) => {
   await persist(toggleProjectPin(workspaceState, projectId));
 };
