@@ -31,7 +31,7 @@
 
 ## Task 3：UI 視覺與 lucide icon 對齊
 
-狀態：待辦
+狀態：完成
 
 - 安裝 `lucide-svelte`。
 - 所有 UI icon 改用 lucide component。

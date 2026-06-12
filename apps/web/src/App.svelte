@@ -1,4 +1,27 @@
 <script lang="ts">
+  import {
+    ArrowDown,
+    ArrowUp,
+    Check,
+    Circle,
+    CircleDot,
+    Database,
+    Download,
+    Folder,
+    History,
+    ListTodo,
+    Moon,
+    Pencil,
+    Pin,
+    PinOff,
+    Plus,
+    RotateCcw,
+    Save,
+    Sun,
+    Trash2,
+    Upload,
+    X,
+  } from "@lucide/svelte";
   import { onMount } from "svelte";
   import {
     createEmptyWorkspace,
@@ -260,22 +283,30 @@
   <header class="topbar">
     <div class="brand">
       <div class="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 64 64">
-          <circle cx="32" cy="32" r="25" />
-          <circle cx="32" cy="32" r="10" />
-          <path d="M32 7v50M7 32h50M14 14l36 36M50 14 14 50" />
-        </svg>
+        <CircleDot size={30} strokeWidth={2.4} />
       </div>
       <div>
-        <p class="eyebrow">Local-first workspace</p>
-        <h1>Ophan</h1>
+        <p class="brand-title">Ophan</p>
+        <p class="brand-subtitle">open and use, no auth, stored in the local</p>
       </div>
     </div>
     <div class="topbar-actions">
-      <button class="ghost" type="button" on:click={exportData}>Export</button>
-      <button class="ghost" type="button" on:click={() => importFileInput.click()}>Import</button>
+      <button class="ghost icon-button" type="button" on:click={exportData}>
+        <Download size={17} />
+        <span>Export</span>
+      </button>
+      <button class="ghost icon-button" type="button" on:click={() => importFileInput.click()}>
+        <Upload size={17} />
+        <span>Import</span>
+      </button>
       <button class="theme-button" type="button" on:click={() => applyTheme(theme === "dark" ? "light" : "dark")}>
-        {theme === "dark" ? "Light" : "Dark"}
+        {#if theme === "dark"}
+          <Sun size={17} />
+          <span>Light</span>
+        {:else}
+          <Moon size={17} />
+          <span>Dark</span>
+        {/if}
       </button>
       <input
         bind:this={importFileInput}
@@ -297,7 +328,7 @@
       <aside class="project-rail" aria-label="Projects">
         <section class="rail-section new-project">
           <div class="section-title">
-            <span>New project</span>
+            <span><Folder size={16} /> New project</span>
             <strong>{projects.length}</strong>
           </div>
           <form on:submit|preventDefault={addProject}>
@@ -310,7 +341,10 @@
                 <option value="MP">MP</option>
                 <option value="SP">SP</option>
               </select>
-              <button class="primary" type="submit">Add</button>
+              <button class="primary icon-button" type="submit">
+                <Plus size={17} />
+                <span>Add</span>
+              </button>
             </div>
           </form>
         </section>
@@ -344,21 +378,24 @@
                 </button>
                 <div class="card-actions" aria-label="Project actions">
                   <button type="button" on:click={() => persist(toggleProjectPin(workspace, project.id))}>
-                    {project.pinned ? "Unpin" : "Pin"}
+                    {#if project.pinned}<PinOff size={14} />{:else}<Pin size={14} />{/if}
+                    <span>{project.pinned ? "Unpin" : "Pin"}</span>
                   </button>
                   <button
                     type="button"
                     disabled={index === 0}
                     on:click={() => persist(moveProject(workspace, project.id, -1))}
                   >
-                    Up
+                    <ArrowUp size={14} />
+                    <span>Up</span>
                   </button>
                   <button
                     type="button"
                     disabled={index === projects.length - 1}
                     on:click={() => persist(moveProject(workspace, project.id, 1))}
                   >
-                    Down
+                    <ArrowDown size={14} />
+                    <span>Down</span>
                   </button>
                 </div>
               </article>
@@ -408,15 +445,24 @@
               <textarea bind:value={projectForm.description} rows="3"></textarea>
             </label>
             <div class="editor-actions">
-              <button class="primary" type="submit">Save project</button>
-              <button class="danger" type="button" on:click={removeActiveProject}>Delete project</button>
+              <button class="primary icon-button" type="submit">
+                <Save size={17} />
+                <span>Save project</span>
+              </button>
+              <button class="danger icon-button" type="button" on:click={removeActiveProject}>
+                <Trash2 size={17} />
+                <span>Delete project</span>
+              </button>
             </div>
           </form>
 
           <div class="idea-toolbar">
             <form on:submit|preventDefault={addIdea}>
               <input bind:value={newIdeaText} placeholder="Capture an idea..." />
-              <button class="primary" type="submit">Add idea</button>
+              <button class="primary icon-button" type="submit">
+                <Plus size={17} />
+                <span>Add idea</span>
+              </button>
             </form>
             <div class="segmented" role="group" aria-label="Idea filter">
               {#each ["todo", "done", "all"] as filter}
@@ -425,6 +471,9 @@
                   type="button"
                   on:click={() => (ideaFilter = filter as IdeaFilter)}
                 >
+                  {#if filter === "todo"}<ListTodo size={15} />{/if}
+                  {#if filter === "done"}<Check size={15} />{/if}
+                  {#if filter === "all"}<Circle size={15} />{/if}
                   {filter}
                 </button>
               {/each}
@@ -446,14 +495,20 @@
                     aria-label={idea.done ? "Mark todo" : "Mark done"}
                     on:click={() => persist(toggleIdeaDone(workspace, idea.id))}
                   >
-                    {idea.done ? "✓" : ""}
+                    {#if idea.done}<Check size={17} />{:else}<Circle size={17} />{/if}
                   </button>
                   <div class="idea-body">
                     {#if editingIdeaId === idea.id}
                       <form class="idea-edit" on:submit|preventDefault={() => saveIdea(idea.id)}>
                         <input bind:value={editingIdeaText} />
-                        <button type="submit">Save</button>
-                        <button type="button" on:click={() => (editingIdeaId = null)}>Cancel</button>
+                        <button class="icon-button" type="submit">
+                          <Save size={15} />
+                          <span>Save</span>
+                        </button>
+                        <button class="icon-button" type="button" on:click={() => (editingIdeaId = null)}>
+                          <X size={15} />
+                          <span>Cancel</span>
+                        </button>
                       </form>
                     {:else}
                       <p>{idea.text}</p>
@@ -462,25 +517,32 @@
                   </div>
                   <div class="idea-actions">
                     <button type="button" on:click={() => persist(toggleIdeaPin(workspace, idea.id))}>
-                      {idea.pinned ? "Unpin" : "Pin"}
+                      {#if idea.pinned}<PinOff size={14} />{:else}<Pin size={14} />{/if}
+                      <span>{idea.pinned ? "Unpin" : "Pin"}</span>
                     </button>
-                    <button type="button" on:click={() => startEditingIdea(idea)}>Edit</button>
+                    <button type="button" on:click={() => startEditingIdea(idea)}>
+                      <Pencil size={14} />
+                      <span>Edit</span>
+                    </button>
                     <button
                       type="button"
                       disabled={index === 0}
                       on:click={() => activeProject && persist(moveIdea(workspace, activeProject.id, idea.id, -1))}
                     >
-                      Up
+                      <ArrowUp size={14} />
+                      <span>Up</span>
                     </button>
                     <button
                       type="button"
                       disabled={index === activeIdeas.length - 1}
                       on:click={() => activeProject && persist(moveIdea(workspace, activeProject.id, idea.id, 1))}
                     >
-                      Down
+                      <ArrowDown size={14} />
+                      <span>Down</span>
                     </button>
                     <button class="danger-text" type="button" on:click={() => persist(deleteIdea(workspace, idea.id), "Idea removed.")}>
-                      Delete
+                      <Trash2 size={14} />
+                      <span>Delete</span>
                     </button>
                   </div>
                 </article>
@@ -498,22 +560,28 @@
       <aside class="insight-panel">
         <section class="sync-card">
           <p class="eyebrow">Storage</p>
-          <h2>Local first</h2>
+          <h2><Database size={19} /> Local first</h2>
           <p>
             Saved in IndexedDB on this device. The repository boundary is ready
             for a future Google Sheets adapter.
           </p>
           <div class="sync-actions">
             {#if legacyAvailable}
-              <button class="ghost" type="button" on:click={importLegacy}>Import legacy static data</button>
+              <button class="ghost icon-button" type="button" on:click={importLegacy}>
+                <Upload size={16} />
+                <span>Import legacy static data</span>
+              </button>
             {/if}
-            <button class="ghost" type="button" on:click={clearLocalWorkspace}>Clear local data</button>
+            <button class="ghost icon-button" type="button" on:click={clearLocalWorkspace}>
+              <RotateCcw size={16} />
+              <span>Clear local data</span>
+            </button>
           </div>
         </section>
 
         <section class="log-card">
           <div class="section-title">
-            <span>Completion log</span>
+            <span><History size={16} /> Completion log</span>
             <strong>{completionLog.length}</strong>
           </div>
           {#if completionLog.length === 0}
