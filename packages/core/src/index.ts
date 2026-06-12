@@ -228,6 +228,10 @@ const normalizeIdea = (
   };
 };
 
+const hasNestedLegacyIdeas = (projects: unknown) =>
+  Array.isArray(projects) &&
+  projects.some((project) => isRecord(project) && Array.isArray(project.ideas));
+
 export const importLegacyProjects = (
   legacyProjects: unknown,
   deviceId = createId()
@@ -274,6 +278,10 @@ export const normalizeWorkspace = (
 
   if (!isRecord(value)) {
     return createEmptyWorkspace(deviceId);
+  }
+
+  if (hasNestedLegacyIdeas(value.projects) && !Array.isArray(value.ideas)) {
+    return importLegacyProjects(value.projects, deviceId);
   }
 
   const fallbackDate = nowIso();

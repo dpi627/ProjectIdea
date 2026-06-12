@@ -59,6 +59,19 @@ assert(workspace.ideas.every((idea) => idea.projectId === "project-a"), "ideas s
 assert(getProjectStats(workspace, "project-a").percent === 50, "legacy stats should compute");
 assert(getCompletionLog(workspace).length === 1, "legacy completed idea should appear in log");
 
+const legacyFileWorkspace = importWorkspaceJson(
+  JSON.stringify({ projects: legacy }),
+  "smoke-device"
+);
+assert(
+  legacyFileWorkspace.projects.length === 1,
+  "legacy object payload should import projects"
+);
+assert(
+  legacyFileWorkspace.ideas.length === 2,
+  "legacy object payload should flatten nested ideas"
+);
+
 const projectResult = createProject(workspace, {
   name: "New Project",
   description: "Core smoke",
