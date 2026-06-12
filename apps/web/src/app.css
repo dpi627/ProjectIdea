@@ -863,6 +863,37 @@ ul.scroll-list {
 
 /* --------------------------------- log panel ------------------------------ */
 
+.trend-card {
+  flex: none;
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  padding: 9px 10px 4px;
+}
+
+.trend-label {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.trend-chart {
+  height: 132px;
+}
+
+.trend-chart.pending {
+  height: 0;
+  overflow: hidden;
+}
+
+.trend-skeleton {
+  min-height: 132px;
+}
+
 .log-item {
   position: relative;
   display: grid;

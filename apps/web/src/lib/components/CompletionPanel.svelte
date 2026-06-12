@@ -8,6 +8,7 @@
   import { ui } from "../state/ui.svelte";
   import { formatDate } from "../utils/format";
   import Skeleton from "./Skeleton.svelte";
+  import TrendChart from "./TrendChart.svelte";
 
   const completionLog = $derived(getCompletionLog(getWorkspace()));
 </script>
@@ -23,6 +24,9 @@
         </span>
       </header>
       <div class="panel-body">
+        {#if ui.logOpenedOnce && !app.isLoading}
+          <TrendChart entries={completionLog} />
+        {/if}
         {#if app.isLoading}
           <Skeleton count={3} />
         {:else if completionLog.length === 0}
