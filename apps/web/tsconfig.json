@@ -1,0 +1,27 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "types": [
+      "svelte"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@ophan/core": [
+        "../../packages/core/src/index.ts"
+      ],
+      "@ophan/storage": [
+        "../../packages/storage/src/index.ts"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.svelte",
+    "vite.config.ts",
+    "svelte.config.js"
+  ]
+}

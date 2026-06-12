@@ -67,7 +67,6 @@ yarn-debug.log*
 yarn-error.log*
 .npm
 .yarn-integrity
-package-lock.json
 yarn.lock
 
 # Python (for local http server)

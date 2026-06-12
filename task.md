@@ -16,7 +16,7 @@
 
 ## Task 2：核心模型與相容匯入確認
 
-狀態：待辦
+狀態：完成
 
 - 檢查 `packages/core` 的 `WorkspaceData`、`Project`、`Idea`。
 - 確認 legacy JSON array 可轉換。

@@ -1,0 +1,19 @@
+{
+  "name": "@ophan/core",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test:smoke": "tsc -p tsconfig.smoke.json && node ../../.cache/core-smoke/core/test/smoke.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

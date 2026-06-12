@@ -1,0 +1,17 @@
+{
+  "name": "ophan-workspace",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "apps/web",
+    "packages/core",
+    "packages/storage"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @ophan/web",
+    "build": "npm run check -w @ophan/core && npm run check -w @ophan/storage && npm run build -w @ophan/web",
+    "check": "npm run check -w @ophan/core && npm run check -w @ophan/storage && npm run check -w @ophan/web",
+    "test:core": "npm run test:smoke -w @ophan/core"
+  }
+}
