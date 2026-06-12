@@ -47,7 +47,7 @@
 
 ## Task 4：專案與 idea 管理流程完成
 
-狀態：待辦
+狀態：完成
 
 - project create/edit/delete。
 - project pin/unpin 與排序。

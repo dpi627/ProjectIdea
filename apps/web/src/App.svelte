@@ -255,17 +255,29 @@
     const input = event.currentTarget as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
-    const text = await file.text();
-    const next = importWorkspaceJson(text, deviceId);
-    activeProjectId = getVisibleProjects(next)[0]?.id || null;
-    await persist(next, "Workspace imported.");
-    input.value = "";
+    try {
+      const text = await file.text();
+      const next = importWorkspaceJson(text, deviceId);
+      activeProjectId = getVisibleProjects(next)[0]?.id || null;
+      await persist(next, "Workspace imported.");
+    } catch (error) {
+      console.warn("Failed to import workspace", error);
+      showToast("Import failed. Check the JSON file.");
+    } finally {
+      input.value = "";
+    }
   };
 
   const importLegacy = async () => {
-    const next = legacyImporter.loadLegacyWorkspace();
-    activeProjectId = getVisibleProjects(next)[0]?.id || null;
-    await persist(next, "Legacy data imported.");
+    try {
+      const next = legacyImporter.loadLegacyWorkspace();
+      activeProjectId = getVisibleProjects(next)[0]?.id || null;
+      await persist(next, "Legacy data imported.");
+      legacyAvailable = false;
+    } catch (error) {
+      console.warn("Failed to import legacy workspace", error);
+      showToast("Legacy import failed.");
+    }
   };
 
   const clearLocalWorkspace = async () => {
