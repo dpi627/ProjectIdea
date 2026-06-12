@@ -1,7 +1,15 @@
 <script lang="ts">
-  import { CircleDot, Download, Moon, Sun, Upload } from "@lucide/svelte";
+  import {
+    CircleDot,
+    Download,
+    Moon,
+    PanelLeft,
+    PanelRight,
+    Sun,
+    Upload,
+  } from "@lucide/svelte";
   import { exportData, importFromJson, showToast } from "../state/app.svelte";
-  import { toggleTheme, ui } from "../state/ui.svelte";
+  import { toggleLog, toggleRail, toggleTheme, ui } from "../state/ui.svelte";
 
   let importFileInput: HTMLInputElement | undefined = $state();
 
@@ -32,6 +40,26 @@
     </div>
   </div>
   <div class="topbar-actions">
+    <button
+      class="ghost icon-button"
+      type="button"
+      aria-pressed={!ui.railCollapsed}
+      title={ui.railCollapsed ? "Show projects panel" : "Hide projects panel"}
+      onclick={toggleRail}
+    >
+      <PanelLeft size={17} />
+      <span class="sr-only">Projects panel</span>
+    </button>
+    <button
+      class="ghost icon-button"
+      type="button"
+      aria-pressed={!ui.logCollapsed}
+      title={ui.logCollapsed ? "Show completed panel" : "Hide completed panel"}
+      onclick={toggleLog}
+    >
+      <PanelRight size={17} />
+      <span class="sr-only">Completed panel</span>
+    </button>
     <button class="ghost icon-button" type="button" onclick={exportData}>
       <Download size={17} />
       <span>Export</span>

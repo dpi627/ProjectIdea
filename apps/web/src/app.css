@@ -38,10 +38,15 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  height: 100%;
+}
+
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
+  overflow: hidden;
   color: var(--ink);
   background: radial-gradient(circle at top left, var(--glow-1) 0%, transparent 55%),
     radial-gradient(circle at 85% 20%, var(--glow-2) 0%, transparent 45%),
@@ -92,11 +97,18 @@ textarea {
   resize: vertical;
 }
 
+#app {
+  height: 100%;
+}
+
 .app-shell {
-  max-width: 95vw;
-  min-height: 100vh;
-  margin: 0 auto;
-  padding: 32px 24px 48px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 18px;
+  height: 100dvh;
+  width: 100%;
+  padding: 18px;
+  overflow: hidden;
 }
 
 .topbar {
@@ -214,24 +226,63 @@ textarea {
   display: none;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .workspace-grid {
+  --rail-w: 318px;
+  --log-w: 358px;
   display: grid;
-  grid-template-columns: clamp(280px, 24vw, 420px) minmax(0, 1fr) clamp(280px, 24vw, 420px);
-  gap: 22px;
-  margin-top: 28px;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--log-w);
+  min-height: 0;
+  transition: grid-template-columns 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.workspace-grid.rail-collapsed {
+  --rail-w: 0px;
+}
+
+.workspace-grid.log-collapsed {
+  --log-w: 0px;
 }
 
 .project-rail,
 .focus-panel,
 .insight-panel {
   min-width: 0;
+  min-height: 0;
 }
 
 .project-rail,
 .insight-panel {
-  display: grid;
-  align-content: start;
+  overflow: hidden;
+}
+
+.rail-inner,
+.log-inner {
+  display: flex;
+  flex-direction: column;
   gap: 18px;
+  height: 100%;
+}
+
+.rail-inner {
+  width: 318px;
+  padding-right: 18px;
+}
+
+.log-inner {
+  width: 358px;
+  padding-left: 18px;
 }
 
 .rail-section,
@@ -300,10 +351,14 @@ h2 {
 }
 
 .project-list {
+  flex: 1;
+  min-height: 0;
   display: grid;
   gap: 12px;
-  max-height: calc(100vh - 260px);
-  overflow: auto;
+  align-content: start;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .project-card {
@@ -384,6 +439,8 @@ h2 {
 }
 
 .focus-panel {
+  display: flex;
+  flex-direction: column;
   padding: 22px;
 }
 
@@ -458,8 +515,29 @@ label {
 }
 
 .idea-list {
+  flex: 1;
+  min-height: 0;
   display: grid;
   gap: 12px;
+  align-content: start;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.log-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.log-card .log-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .idea-card {
@@ -590,26 +668,42 @@ label {
   }
 }
 
-@media (max-width: 1120px) {
-  .workspace-grid {
-    grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
+@media (max-width: 900px) {
+  body {
+    overflow: auto;
   }
 
-  .insight-panel {
-    grid-column: 1 / -1;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 760px) {
   .app-shell {
-    max-width: 100vw;
+    height: auto;
+    overflow: visible;
     padding: 14px;
   }
 
+  .workspace-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    transition: none;
+  }
+
+  .workspace-grid.rail-collapsed .project-rail,
+  .workspace-grid.log-collapsed .insight-panel {
+    display: none;
+  }
+
+  .rail-inner,
+  .log-inner {
+    width: 100%;
+    padding: 0;
+    height: auto;
+  }
+
+  .project-list,
+  .idea-list,
+  .log-card .log-list {
+    overflow: visible;
+  }
+
   .topbar,
-  .workspace-grid,
-  .insight-panel,
   .editor-grid,
   .idea-toolbar form,
   .idea-card {
@@ -620,10 +714,6 @@ label {
   .panel-header {
     align-items: flex-start;
     flex-direction: column;
-  }
-
-  .project-list {
-    max-height: none;
   }
 
   .idea-actions {

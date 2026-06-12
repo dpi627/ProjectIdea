@@ -6,7 +6,7 @@
   import Toast from "./lib/components/Toast.svelte";
   import Topbar from "./lib/components/Topbar.svelte";
   import { app, init } from "./lib/state/app.svelte";
-  import { loadUi } from "./lib/state/ui.svelte";
+  import { loadUi, ui } from "./lib/state/ui.svelte";
 
   onMount(async () => {
     loadUi();
@@ -27,7 +27,11 @@
       <p>Opening local workspace...</p>
     </main>
   {:else}
-    <main class="workspace-grid">
+    <main
+      class="workspace-grid"
+      class:rail-collapsed={ui.railCollapsed}
+      class:log-collapsed={ui.logCollapsed}
+    >
       <ProjectRail />
       <IdeaPanel />
       <CompletionPanel />

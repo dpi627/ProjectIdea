@@ -7,12 +7,14 @@
     getWorkspace,
     importLegacy,
   } from "../state/app.svelte";
+  import { ui } from "../state/ui.svelte";
   import { formatDate } from "../utils/format";
 
   const completionLog = $derived(getCompletionLog(getWorkspace()));
 </script>
 
-<aside class="insight-panel">
+<aside class="insight-panel" aria-label="Completed ideas" inert={ui.logCollapsed}>
+  <div class="log-inner">
   <section class="sync-card">
     <p class="eyebrow">Storage</p>
     <h2><Database size={19} /> Local first</h2>
@@ -55,4 +57,5 @@
       </ol>
     {/if}
   </section>
+  </div>
 </aside>

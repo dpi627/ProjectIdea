@@ -9,6 +9,7 @@
     nudgeProject,
     togglePinProject,
   } from "../state/app.svelte";
+  import { ui } from "../state/ui.svelte";
 
   const projects = $derived(getVisibleProjects(getWorkspace()));
 
@@ -21,7 +22,8 @@
   };
 </script>
 
-<aside class="project-rail" aria-label="Projects">
+<aside class="project-rail" aria-label="Projects" inert={ui.railCollapsed}>
+  <div class="rail-inner">
   <section class="rail-section new-project">
     <div class="section-title">
       <span><Folder size={16} /> New project</span>
@@ -98,4 +100,5 @@
       {/each}
     {/if}
   </section>
+  </div>
 </aside>
