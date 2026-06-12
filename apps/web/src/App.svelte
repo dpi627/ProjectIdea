@@ -606,7 +606,7 @@
               {#each completionLog.slice(0, 12) as entry (entry.idea.id)}
                 <li>
                   <span>{entry.idea.text}</span>
-                  <small>{entry.projectName} · {formatDate(entry.idea.finishedAt)}</small>
+                  <small>{entry.projectName} - {formatDate(entry.idea.finishedAt)}</small>
                 </li>
               {/each}
             </ol>
