@@ -29,7 +29,7 @@
 ## 階段三：UI 視覺與 lucide icon 對齊
 
 - 將 `apps/web` 色票、字體、panel、topbar、workspace layout 改為沿用 legacy 視覺。
-- 安裝並使用 `lucide-svelte`。
+- 安裝並使用官方 `@lucide/svelte`。
 - 移除自製 SVG、符號字元、emoji。
 - 將主要操作按鈕改為 lucide icon 搭配文字或 accessible label。
 - 保持 UI 密度與舊版工具型介面相近。

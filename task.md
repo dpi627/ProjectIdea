@@ -33,7 +33,7 @@
 
 狀態：完成
 
-- 安裝 `lucide-svelte`。
+- 安裝 `@lucide/svelte`。
 - 所有 UI icon 改用 lucide component。
 - 移除自製 SVG 與符號式圖示。
 - 移除 emoji。
