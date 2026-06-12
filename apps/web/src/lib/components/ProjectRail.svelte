@@ -7,13 +7,17 @@
     Pin,
     Plus,
   } from "@lucide/svelte";
+  import { flip } from "svelte/animate";
+  import { fade } from "svelte/transition";
   import { getProjectStats, getVisibleProjects } from "@ophan/core";
+  import { motionMs } from "../animations/entrance";
   import {
     app,
     getWorkspace,
     nudgeProject,
     togglePinProject,
   } from "../state/app.svelte";
+  import Skeleton from "./Skeleton.svelte";
   import { openProjectCreate, openProjectEdit } from "../state/dialogs.svelte";
   import { setCategoryFilter, ui, type CategoryFilter } from "../state/ui.svelte";
 
@@ -31,7 +35,7 @@
 
 <aside class="project-rail" aria-label="Projects" inert={ui.railCollapsed}>
   <div class="rail-inner">
-    <section class="panel fill">
+    <section class="panel fill" data-anim="panel">
       <header class="panel-head">
         <span class="panel-head-title">
           <FolderKanban size={16} />
@@ -58,7 +62,9 @@
         </div>
 
         <div class="scroll-list">
-          {#if filteredProjects.length === 0}
+          {#if app.isLoading}
+            <Skeleton count={4} />
+          {:else if filteredProjects.length === 0}
             <div class="empty-state compact">
               <p>{projects.length === 0 ? "No projects yet." : "Nothing in this category."}</p>
               <span>
@@ -70,7 +76,13 @@
           {:else}
             {#each filteredProjects as project, index (project.id)}
               {@const stats = getProjectStats(getWorkspace(), project.id)}
-              <article class="project-card" class:active={app.activeProjectId === project.id}>
+              <article
+                class="project-card"
+                class:active={app.activeProjectId === project.id}
+                data-anim="card"
+                animate:flip={{ duration: motionMs(240) }}
+                transition:fade={{ duration: motionMs(140) }}
+              >
                 <button
                   class="project-select"
                   type="button"

@@ -50,7 +50,7 @@
 </script>
 
 <header class="topbar">
-  <div class="brand">
+  <div class="brand" data-anim="bar">
     <div class="brand-mark" aria-hidden="true">
       <CircleDot size={19} strokeWidth={2.4} />
     </div>
@@ -59,7 +59,7 @@
       <p class="brand-subtitle">open and use, no auth, stored in the local</p>
     </div>
   </div>
-  <div class="topbar-actions">
+  <div class="topbar-actions" data-anim="bar">
     <button
       class="tool-button"
       type="button"

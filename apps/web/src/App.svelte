@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { runEntrance } from "./lib/animations/entrance";
   import CompletionPanel from "./lib/components/CompletionPanel.svelte";
   import ConfirmDialog from "./lib/components/ConfirmDialog.svelte";
   import IdeaPanel from "./lib/components/IdeaPanel.svelte";
@@ -10,9 +11,19 @@
   import { app, init } from "./lib/state/app.svelte";
   import { loadUi, ui } from "./lib/state/ui.svelte";
 
+  let shellEl: HTMLDivElement | undefined = $state();
+  let entrancePlayed = false;
+
   onMount(async () => {
     loadUi();
     await init();
+  });
+
+  $effect(() => {
+    if (!app.isLoading && shellEl && !entrancePlayed) {
+      entrancePlayed = true;
+      runEntrance(shellEl);
+    }
   });
 </script>
 
@@ -20,25 +31,18 @@
   <title>Ophan</title>
 </svelte:head>
 
-<div class="app-shell">
+<div class="app-shell" bind:this={shellEl}>
   <Topbar />
 
-  {#if app.isLoading}
-    <main class="loading-panel">
-      <span class="orbit-loader" aria-hidden="true"></span>
-      <p>Opening local workspace...</p>
-    </main>
-  {:else}
-    <main
-      class="workspace-grid"
-      class:rail-collapsed={ui.railCollapsed}
-      class:log-collapsed={ui.logCollapsed}
-    >
-      <ProjectRail />
-      <IdeaPanel />
-      <CompletionPanel />
-    </main>
-  {/if}
+  <main
+    class="workspace-grid"
+    class:rail-collapsed={ui.railCollapsed}
+    class:log-collapsed={ui.logCollapsed}
+  >
+    <ProjectRail />
+    <IdeaPanel />
+    <CompletionPanel />
+  </main>
 
   <ProjectDialog />
   <ConfirmDialog />

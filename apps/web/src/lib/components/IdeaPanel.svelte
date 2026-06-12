@@ -19,6 +19,9 @@
     type Idea,
     type IdeaFilter,
   } from "@ophan/core";
+  import { flip } from "svelte/animate";
+  import { slide } from "svelte/transition";
+  import { motionMs } from "../animations/entrance";
   import {
     addIdea,
     app,
@@ -30,6 +33,7 @@
     toggleDone,
     togglePinIdea,
   } from "../state/app.svelte";
+  import Skeleton from "./Skeleton.svelte";
   import {
     openConfirm,
     openProjectCreate,
@@ -98,8 +102,15 @@
   };
 </script>
 
-<section class="focus-panel panel">
-  {#if activeProject}
+<section class="focus-panel panel" data-anim="panel">
+  {#if app.isLoading}
+    <header class="focus-head">
+      <Skeleton variant="line" count={2} />
+    </header>
+    <div class="idea-scroll">
+      <Skeleton count={4} />
+    </div>
+  {:else if activeProject}
     <header class="focus-head">
       <div class="focus-title-row">
         <div class="focus-title">
@@ -182,7 +193,13 @@
         </div>
       {:else}
         {#each ideas as idea, index (idea.id)}
-          <article class="idea-card" class:done={idea.done}>
+          <article
+            class="idea-card"
+            class:done={idea.done}
+            data-anim="card"
+            animate:flip={{ duration: motionMs(220) }}
+            transition:slide={{ duration: motionMs(180) }}
+          >
             <button
               class="check-button"
               type="button"
