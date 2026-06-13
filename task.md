@@ -72,10 +72,32 @@
 - 簡化過度抽象。
 - 確認 core 不依賴 UI 或 browser API。
 - 確認 storage 是 browser API 邊界。
-- 確認 legacy root app 可通過 syntax check。
+- 確認 legacy app 可通過 syntax check。
 - 驗證：
   - `npm run check`
   - `npm run build`
-  - `node --check app.js`
+  - `node --check lagcy/app.js`
 - 完成後 commit：
   - `refactor: 簡化 Ophan 實作並完成收斂`
+
+## Task 6：UI 全面重新設計
+
+狀態：完成
+
+- 100dvh app-shell 三欄版面（左：專案、中：ideas、右：完成紀錄），左右欄可收合並持久化狀態。
+- 視覺系統：移除大陰影、漸層 token（`--grad-accent`/`--grad-border`）、hover-revealed icon actions、category filter chips。
+- GSAP 進場動畫、Svelte FLIP 排序動畫、shimmer skeleton、`prefers-reduced-motion` 支援。
+- 拖曳排序（HTML5 DnD），core 新增 `moveProjectTo`/`moveIdeaTo`（additive only，含 smoke test）。
+- ECharts 完成趨勢圖（延遲載入，獨立 Vite chunk ~509KB，主題即時同步）。
+- 驗證：
+  - `npm run check`（0 errors）
+  - `npm run build`（通過）
+  - `node --check lagcy/app.js`（通過）
+  - Playwright 煙霧測試驗證所有功能
+- 完成後 commits（6 個）：
+  - `refactor: 抽離 state 模組並拆分 UI 元件`
+  - `feat: 改為 100dvh app-shell 版面與可收合三欄`
+  - `feat: 重新設計視覺系統並提升操作效率`
+  - `feat: 加入漸進式載入與進場動畫`
+  - `feat: 加回專案與 idea 的拖曳排序`
+  - `feat: 右欄加入 ECharts 完成趨勢圖（延遲載入）`

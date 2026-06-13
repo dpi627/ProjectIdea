@@ -1,0 +1,743 @@
+{
+  "projects": [
+    {
+      "id": "84e4de38-9e12-4aff-87b7-746f61fc9e24",
+      "name": "Project Ideas",
+      "description": "manage project ideas",
+      "startDate": null,
+      "dueDate": null,
+      "category": null,
+      "pinned": false,
+      "ideas": [
+        {
+          "id": "e16692af-7dec-4c3a-9b9d-20c0f82db030",
+          "text": "finished-idea-dialog feature: new result display layout, group ideas in a list item by day, each day-section support a copy button (no repoen)",
+          "done": false,
+          "createdAt": 1768372027889,
+          "finishedAt": null,
+          "pinned": false
+        },
+        {
+          "id": "f8b71e10-0118-4192-b44a-036734832c25",
+          "text": "add a random version",
+          "done": false,
+          "createdAt": 1768530890081,
+          "finishedAt": null,
+          "pinned": false
+        },
+        {
+          "id": "52f315ad-597f-4bfb-89da-52574c89e98b",
+          "text": "show up a dialog to display current model usage in real time while click corner button (if server alive)",
+          "done": false,
+          "createdAt": 1768218827933,
+          "finishedAt": null,
+          "pinned": false
+        },
+        {
+          "id": "c04e23bd-96f5-44df-aaa6-1c1a327ebc71",
+          "text": "deploy to www like GitHub Pages",
+          "done": false,
+          "createdAt": 1768262388238,
+          "finishedAt": null,
+          "pinned": false
+        },
+        {
+          "id": "d255fe1b-356c-4d3c-ad70-b9964c64f72a",
+          "text": "use Google Sheet for datasource",
+          "done": false,
+          "createdAt": 1768262402691,
+          "finishedAt": null,
+          "pinned": false
+        },
+        {
+          "id": "4cde11c8-82f2-42c6-9bfc-f4c27040356f",
+          "text": "test export/import features in diff origin",
+          "done": false,
+          "createdAt": 1768134438796,
+          "finishedAt": null,
+          "pinned": false
+        },
+        {
+          "id": "188053b3-d987-4083-92ab-588eccc9bad7",
+          "text": "add project tag (catalog), such ci, side project",
+          "done": false,
+          "createdAt": 1768010189139,
+          "finishedAt": null,
+          "pinned": false
+        },
+        {
+          "id": "91429516-f916-4944-8dfb-803aab53d955",
+          "text": "keep finished ideas in local storage, remove when idea or project deleted",
+          "done": true,
+          "createdAt": 1768011054870,
+          "finishedAt": "2026-01-10T02:15:02.549Z",
+          "pinned": false
+        },
+        {
+          "id": "1914f5d0-5c6c-4a00-a4a9-49859ac13273",
+          "text": "Change idea's toggle button like it's function buttons (edit/delete/copy)",
+          "done": true,
+          "createdAt": 1768010146731,
+          "finishedAt": "2026-01-10T02:22:35.413Z",
+          "pinned": false
+        },
+        {
+          "id": "2d4918e3-5631-4109-ba63-1db1cddd44b6",
+          "text": "move finish idea to the list bottom",
+          "done": true,
+          "createdAt": 1768011510230,
+          "finishedAt": "2026-01-10T02:25:12.602Z",
+          "pinned": false
+        },
+        {
+          "id": "ea969535-0bec-4bf9-9b79-038349a9a48b",
+          "text": "display idea on top when just add to list",
+          "done": true,
+          "createdAt": 1768011447663,
+          "finishedAt": "2026-01-10T02:25:16.349Z",
+          "pinned": false
+        },
+        {
+          "id": "ff980c7f-aab3-4a3d-b6a7-52b574ce28b9",
+          "text": "change delete confirm windows style like edit dialog",
+          "done": true,
+          "createdAt": 1768011388530,
+          "finishedAt": "2026-01-10T02:25:24.253Z",
+          "pinned": false
+        },
+        {
+          "id": "60fb6ce9-11f2-4f57-88e9-502253fdddc1",
+          "text": "extend idea description length to double, also edit dialog input bo",
+          "done": true,
+          "createdAt": 1768011900682,
+          "finishedAt": "2026-01-10T02:28:35.577Z",
+          "pinned": false
+        },
+        {
+          "id": "9756b590-06d4-4073-a90f-a511358f77f5",
+          "text": "add button beside toggle theme to show/hide session log (finished ideas)",
+          "done": true,
+          "createdAt": 1768010250730,
+          "finishedAt": "2026-01-10T02:44:20.423Z",
+          "pinned": false
+        },
+        {
+          "id": "ace35e04-81e5-486b-a658-8e38327126c6",
+          "text": "background animation",
+          "done": true,
+          "createdAt": 1768010298807,
+          "finishedAt": "2026-01-10T02:44:42.312Z",
+          "pinned": false
+        },
+        {
+          "id": "b8ee0dd7-bc44-415b-9053-b2cd7f018b64",
+          "text": "session logs also display project name on bottom. remove words before Finished datetime.",
+          "done": true,
+          "createdAt": 1768010274701,
+          "finishedAt": "2026-01-10T02:51:32.498Z",
+          "pinned": false
+        },
+        {
+          "id": "fe253ce1-720f-4b86-8b33-9d9a7fb19e1e",
+          "text": "change all datetime format to yyyy-MM-dd HH:mm",
+          "done": true,
+          "createdAt": 1768013346427,
+          "finishedAt": "2026-01-10T02:52:27.811Z",
+          "pinned": false
+        },
+        {
+          "id": "c13ce783-6870-4b70-89cd-2cdbfaafebdf",
+          "text": "add \"Finished\" before all finished ideas",
+          "done": true,
+          "createdAt": 1768013537311,
+          "finishedAt": "2026-01-10T02:55:18.673Z",
+          "pinned": false
+        },
+        {
+          "id": "0e9dfeb3-8088-4227-87ce-5ae1f01855b7",
+          "text": "add a filter feature in Finished ideas block. display latest 10 records.",
+          "done": true,
+          "createdAt": 1768014150259,
+          "finishedAt": "2026-01-10T03:12:04.575Z",
+          "pinned": false
+        },
+        {
+          "id": "f27a21fb-f3a9-4982-af0b-69024a4a11d3",
+          "text": "add \"reopen\" feature for finished ideas",
+          "done": true,
+          "createdAt": 1768027786049,
+          "finishedAt": "2026-01-10T06:59:14.085Z",
+          "pinned": false
+        },
+        {
+          "id": "9a96f5c1-6ff6-40c1-9096-2ccc1e617152",
+          "text": "idea panel list only shows todo ideas, no finished ideas",
+          "done": true,
+          "createdAt": 1768010457605,
+          "finishedAt": "2026-01-10T06:59:24.715Z",
+          "pinned": false
+        },
+        {
+          "id": "56cdee4b-85e3-44d1-88ef-1f91d3e636b3",
+          "text": "add a mini animation for projects that not completed, default hide, display when selected to identify it's alive (still have idea to implement)",
+          "done": true,
+          "createdAt": 1768028607662,
+          "finishedAt": "2026-01-10T07:07:09.314Z",
+          "pinned": false
+        },
+        {
+          "id": "96b23c0b-d5cf-4835-b4ad-31b24c1ad1c6",
+          "text": "project add a description property (optional filed), display under project title",
+          "done": true,
+          "createdAt": 1768028063572,
+          "finishedAt": "2026-01-10T07:19:21.657Z",
+          "pinned": false
+        },
+        {
+          "id": "0366f832-e1d2-4e1b-b373-687c2557641b",
+          "text": "export projects and ideas",
+          "done": true,
+          "createdAt": 1768010201633,
+          "finishedAt": "2026-01-11T12:27:25.940Z",
+          "pinned": false
+        },
+        {
+          "id": "8b94b86f-499a-4050-86ec-1409ee288869",
+          "text": "each ides add a copy button to copy idea's description",
+          "done": true,
+          "createdAt": 1768010557418,
+          "finishedAt": "2026-01-11T12:28:08.315Z",
+          "pinned": false
+        },
+        {
+          "id": "8169aea9-7a68-458c-9d2a-b34772298a81",
+          "text": "make background animation more visiable",
+          "done": true,
+          "createdAt": 1768134970214,
+          "finishedAt": "2026-01-11T13:30:58.898Z",
+          "pinned": false
+        },
+        {
+          "id": "48f09b56-9c6b-47ec-9156-a0f08b29e9e9",
+          "text": "remember local setting, such as current project, dark/light theme and show/hide finished-ideas panel",
+          "done": true,
+          "createdAt": 1768138247796,
+          "finishedAt": "2026-01-11T13:39:28.620Z",
+          "pinned": false
+        },
+        {
+          "id": "861ee67a-4791-4ac8-815c-0083392e3a16",
+          "text": "create website favorite icon",
+          "done": true,
+          "createdAt": 1768138120569,
+          "finishedAt": "2026-01-11T13:49:12.920Z",
+          "pinned": false
+        },
+        {
+          "id": "5b4b32c1-d91c-451c-9ec5-84dd891ad1dc",
+          "text": "add reopen confirm dialog for done-idea in ideas panel, just as reopen idea in finished ideas panel",
+          "done": true,
+          "createdAt": 1768134536093,
+          "finishedAt": "2026-01-11T14:08:55.018Z",
+          "pinned": false
+        },
+        {
+          "id": "a2f2a1ca-f242-4e1e-a796-54849ecfe0c0",
+          "text": "add a \"View All\" in bottom of finished ideas block",
+          "done": true,
+          "createdAt": 1768135738504,
+          "finishedAt": "2026-01-11T14:54:07.630Z",
+          "pinned": false
+        },
+        {
+          "id": "3b510b31-1391-4b0c-a3f3-b9f3c82b17e4",
+          "text": "fished ideas panel only show top 6 items",
+          "done": true,
+          "createdAt": 1768134833593,
+          "finishedAt": "2026-01-11T14:54:09.683Z",
+          "pinned": false
+        },
+        {
+          "id": "78661499-3eb8-4b9c-998b-15c88e067664",
+          "text": "design a finished-ideas-details page",
+          "done": true,
+          "createdAt": 1768143279025,
+          "finishedAt": "2026-01-12T00:43:35.251Z",
+          "pinned": false
+        },
+        {
+          "id": "cb46ca14-5276-49ef-8cef-521fceaf0f99",
+          "text": "add footer section in this page",
+          "done": true,
+          "createdAt": 1768134863642,
+          "finishedAt": "2026-01-12T00:46:24.935Z",
+          "pinned": false
+        },
+        {
+          "id": "b9570f65-800c-4604-b88e-ea57197669bd",
+          "text": "replace footer-brand info with author info",
+          "done": true,
+          "createdAt": 1768185985956,
+          "finishedAt": "2026-01-12T09:56:47.215Z",
+          "pinned": false
+        },
+        {
+          "id": "65dee03e-d7a3-4d0c-8139-0954076de2a9",
+          "text": "use mainstream char lib replace current chart in finished-ideas's panel",
+          "done": true,
+          "createdAt": 1768211872674,
+          "finishedAt": "2026-01-12T11:08:53.626Z",
+          "pinned": false
+        },
+        {
+          "id": "3cc2a9c6-efec-47f8-84d6-c1205e4dbe4a",
+          "text": "resize chart block to double width",
+          "done": true,
+          "createdAt": 1768216264295,
+          "finishedAt": "2026-01-12T11:27:03.947Z",
+          "pinned": false
+        },
+        {
+          "id": "7b21af34-817e-4c84-be63-bc9780f928aa",
+          "text": "add a pie chart in finished ideas panel, under current bar char",
+          "done": true,
+          "createdAt": 1768216201721,
+          "finishedAt": "2026-01-12T11:27:06.424Z",
+          "pinned": false
+        },
+        {
+          "id": "fb0f1eac-3263-493a-996d-bb4de2804cc8",
+          "text": "main page width extends to 85% browser's width",
+          "done": true,
+          "createdAt": 1768216345644,
+          "finishedAt": "2026-01-12T11:37:40.969Z",
+          "pinned": false
+        },
+        {
+          "id": "4c6c0770-8d65-4131-8d86-9ba31e12d52e",
+          "text": "drag & drop animation (item should be interactive with drag item)",
+          "done": true,
+          "createdAt": 1768144791739,
+          "finishedAt": "2026-01-12T11:44:44.154Z",
+          "pinned": false
+        },
+        {
+          "id": "9b51d4de-cc34-45dc-8a31-a7d20e5c25c3",
+          "text": "place a proxy server detection in right corner",
+          "done": true,
+          "createdAt": 1768218733880,
+          "finishedAt": "2026-01-12T12:08:22.669Z",
+          "pinned": false
+        },
+        {
+          "id": "ad09c648-30e1-4456-9b6d-2b0a0e19c12b",
+          "text": "add theme/ui-state settings to export/import feature",
+          "done": true,
+          "createdAt": 1768261613709,
+          "finishedAt": "2026-01-13T00:01:53.416Z",
+          "pinned": false
+        },
+        {
+          "id": "86c85664-8e3e-4500-bd7a-2b395ebeac5b",
+          "text": "design a notify message feature, notice while idea completed, copied, reopened, deleted, edited, added, also project's event",
+          "done": true,
+          "createdAt": 1768262767165,
+          "finishedAt": "2026-01-13T00:19:06.167Z",
+          "pinned": false
+        },
+        {
+          "id": "b913cdb4-1058-4ced-a89d-ce8ab283f71e",
+          "text": "finished-ideas panel width seems fixed, make it support RWD (around 3 cols in FHD)",
+          "done": true,
+          "createdAt": 1768266801964,
+          "finishedAt": "2026-01-13T01:18:36.623Z",
+          "pinned": false
+        },
+        {
+          "id": "d93f8edb-369c-4985-967d-6627451cffbc",
+          "text": "add a Setting function behind theme toggle, open a dialog when click. Setting is two cols layout, menu in left, click to switch content in right",
+          "done": true,
+          "createdAt": 1768261962605,
+          "finishedAt": "2026-01-13T02:42:13.343Z",
+          "pinned": false
+        },
+        {
+          "id": "aac52e41-957a-48f5-a7d4-09cde5424e94",
+          "text": "fix project display width (too long)",
+          "done": true,
+          "createdAt": 1768371627250,
+          "finishedAt": "2026-01-14T06:27:13.428Z",
+          "pinned": false
+        }
+      ]
+    },
+    {
+      "id": "2886a241-7c8c-421c-9e7a-79e9529ad96c",
+      "name": "MonitR",
+      "description": "monitor server or service in office",
+      "startDate": null,
+      "dueDate": null,
+      "category": null,
+      "pinned": false,
+      "ideas": [
+        {
+          "id": "1cefef80-3a7a-4e4b-b50c-00cea8827d41",
+          "text": "modify snack bar style",
+          "done": false,
+          "createdAt": 1768384102614,
+          "finishedAt": null,
+          "pinned": false
+        },
+        {
+          "id": "fe896c88-e833-4c4d-a2ad-f9789b571a8e",
+          "text": "auto starting monitor while monitor all start when add target",
+          "done": false,
+          "createdAt": 1768384081690,
+          "finishedAt": null,
+          "pinned": false
+        },
+        {
+          "id": "204d49b1-bff5-4bc4-8db3-41d5030e74a2",
+          "text": "add dark/light toggle feature",
+          "done": false,
+          "createdAt": 1768377208750,
+          "finishedAt": null,
+          "pinned": false
+        },
+        {
+          "id": "a4a5fbbf-1364-4301-83b7-c6c699dc1123",
+          "text": "change drop down list item",
+          "done": false,
+          "createdAt": 1768377153920,
+          "finishedAt": null,
+          "pinned": false
+        },
+        {
+          "id": "8477cbd2-64b1-480e-8805-173e1f07ece4",
+          "text": "add line chart",
+          "done": true,
+          "createdAt": 1768376656932,
+          "finishedAt": "2026-01-14T07:53:34.556Z",
+          "pinned": false
+        }
+      ]
+    },
+    {
+      "id": "5a8818a3-9035-4a7b-b9b7-62b3ea5a259b",
+      "name": "Weighing API Key",
+      "description": "AFL weighing API Key management",
+      "startDate": null,
+      "dueDate": null,
+      "category": null,
+      "pinned": false,
+      "ideas": [
+        {
+          "id": "77619f3c-7d04-412e-b2e2-836989665093",
+          "text": "check \"remember me\" feature in the login panel is implement or not, complete it if not implement",
+          "done": false,
+          "createdAt": 1768217622392,
+          "finishedAt": null,
+          "pinned": false
+        },
+        {
+          "id": "f79b4651-bc75-408d-a536-4cfa958073eb",
+          "text": "fix copy-api-key feature, current copy key with mask *, should copy the real key",
+          "done": false,
+          "createdAt": 1768141260283,
+          "finishedAt": null,
+          "pinned": false
+        },
+        {
+          "id": "16d9b721-9c02-4d82-a53f-2b5abbe80afc",
+          "text": "frontend prototype",
+          "done": true,
+          "createdAt": 1768012606851,
+          "finishedAt": "2026-01-10T02:36:50.052Z",
+          "pinned": false
+        },
+        {
+          "id": "cfbad0de-796c-4015-9091-c68fbf42f3e0",
+          "text": "redesign dashboard top-4 info box, keep icon position, use icon background for whole info box, count and text move to right of box",
+          "done": true,
+          "createdAt": 1768138045563,
+          "finishedAt": "2026-01-11T13:32:13.971Z",
+          "pinned": false
+        },
+        {
+          "id": "420d6b9e-7d0a-41f2-be18-44ea88d3e903",
+          "text": "remove user-email under user-name",
+          "done": true,
+          "createdAt": 1768137848916,
+          "finishedAt": "2026-01-11T13:36:10.796Z",
+          "pinned": false
+        },
+        {
+          "id": "e3d1891d-5f62-42eb-9dd2-a7590668659c",
+          "text": "change user-avatar to use first 2 characters of user-id",
+          "done": true,
+          "createdAt": 1768137821669,
+          "finishedAt": "2026-01-11T13:36:23.276Z",
+          "pinned": false
+        },
+        {
+          "id": "2735a35f-43ef-4a69-afa9-394cc918c691",
+          "text": "modify ui layout design, fix RWD issues",
+          "done": true,
+          "createdAt": 1768133419609,
+          "finishedAt": "2026-01-11T13:36:34.272Z",
+          "pinned": false
+        },
+        {
+          "id": "156b486a-8d9c-446c-85eb-1ac8b2eff3c9",
+          "text": "test ad auth",
+          "done": true,
+          "createdAt": 1768011719744,
+          "finishedAt": "2026-01-11T13:37:20.436Z",
+          "pinned": false
+        },
+        {
+          "id": "03b80e74-c08d-4892-8dcd-5e651416c7f8",
+          "text": "show/hide left menu, and save settings in local",
+          "done": true,
+          "createdAt": 1768138492581,
+          "finishedAt": "2026-01-11T13:52:58.157Z",
+          "pinned": false
+        },
+        {
+          "id": "1f9bf464-abfd-42c9-ba1e-91abdb9de452",
+          "text": "move api key description under api key name",
+          "done": true,
+          "createdAt": 1768141287115,
+          "finishedAt": "2026-01-11T14:59:27.381Z",
+          "pinned": false
+        },
+        {
+          "id": "efd160e1-7bf5-4117-8848-c09a40e0ee5b",
+          "text": "remove \"Don't have an account? Start free trial\" in login",
+          "done": true,
+          "createdAt": 1768180752063,
+          "finishedAt": "2026-01-12T01:19:24.330Z",
+          "pinned": false
+        },
+        {
+          "id": "f9d2da7c-6a2e-4804-9309-d2e471915998",
+          "text": "remove show-api-key button",
+          "done": true,
+          "createdAt": 1768141160487,
+          "finishedAt": "2026-01-12T11:13:14.517Z",
+          "pinned": false
+        },
+        {
+          "id": "909f6603-953b-42de-9bcd-e8877a89ad49",
+          "text": "replace api-key-delete confirm box with a dialog box, just like edit dialog box",
+          "done": true,
+          "createdAt": 1768140037186,
+          "finishedAt": "2026-01-12T11:13:28.956Z",
+          "pinned": false
+        },
+        {
+          "id": "a6ade6b6-b9e1-4e09-ac00-32b06bc08243",
+          "text": "CreatedBy stored UserId not UserName",
+          "done": true,
+          "createdAt": 1768133638214,
+          "finishedAt": "2026-01-12T11:14:08.747Z",
+          "pinned": false
+        },
+        {
+          "id": "f5f79ac9-7789-44be-b8ef-4e9da8779dc8",
+          "text": "test create api key",
+          "done": true,
+          "createdAt": 1768134651032,
+          "finishedAt": "2026-01-12T11:14:09.624Z",
+          "pinned": false
+        },
+        {
+          "id": "0b231d94-9fbd-46d2-9ef3-0bc56947b28b",
+          "text": "add polygene animation in background while login, hidden on logon",
+          "done": true,
+          "createdAt": 1768216617127,
+          "finishedAt": "2026-01-12T11:34:27.592Z",
+          "pinned": false
+        }
+      ]
+    },
+    {
+      "id": "39e67905-d6cf-48e9-bfe8-cd63b2668a82",
+      "name": "SGS.OAD.Project",
+      "description": "oad project management",
+      "startDate": null,
+      "dueDate": null,
+      "category": null,
+      "pinned": false,
+      "ideas": [
+        {
+          "id": "731d58fe-9086-4ced-a3a5-485d96a16e83",
+          "text": "CLI Broker",
+          "done": false,
+          "createdAt": 1768011575183,
+          "finishedAt": null,
+          "pinned": false
+        },
+        {
+          "id": "5245c8c0-971f-421d-8857-1d30c4017458",
+          "text": "remove old source code",
+          "done": true,
+          "createdAt": 1768012636748,
+          "finishedAt": "2026-01-10T02:38:48.805Z",
+          "pinned": false
+        },
+        {
+          "id": "f6a97166-80aa-4e17-a945-bcd37eaafd74",
+          "text": "review SSDT",
+          "done": true,
+          "createdAt": 1768012703696,
+          "finishedAt": "2026-01-10T02:38:50.111Z",
+          "pinned": false
+        },
+        {
+          "id": "e003fdff-9e48-4aeb-bfe5-53ef5d73f45b",
+          "text": "generate frontend project",
+          "done": true,
+          "createdAt": 1768012723962,
+          "finishedAt": "2026-01-10T02:38:51.723Z",
+          "pinned": false
+        }
+      ]
+    },
+    {
+      "id": "1159e243-72b3-4354-9fd8-db455483cae6",
+      "name": "StockR",
+      "description": "monitor stack market",
+      "startDate": null,
+      "dueDate": null,
+      "category": null,
+      "pinned": false,
+      "ideas": [
+        {
+          "id": "332da9f7-07d1-4957-80b1-fc909978fc85",
+          "text": "add 三大法人",
+          "done": false,
+          "createdAt": 1768269023039,
+          "finishedAt": null,
+          "pinned": false
+        },
+        {
+          "id": "0ee7580f-c9d6-4f01-843b-d2e50eb7e7c0",
+          "text": "trace news on www, such as Trump's X",
+          "done": false,
+          "createdAt": 1768267301231,
+          "finishedAt": null,
+          "pinned": false
+        },
+        {
+          "id": "b81f299c-a557-41cb-9c1c-bc25d1cb7e7d",
+          "text": "trace 台股大盤 & 美股期貨夜盤",
+          "done": false,
+          "createdAt": 1768133934921,
+          "finishedAt": null,
+          "pinned": false
+        },
+        {
+          "id": "c04a4264-8a8d-45e9-979b-7a5e30ad64d2",
+          "text": "create prototype in Google AI Studio",
+          "done": true,
+          "createdAt": 1768133811861,
+          "finishedAt": "2026-01-11T12:35:35.080Z",
+          "pinned": false
+        },
+        {
+          "id": "040916d7-747b-47cf-a1e6-6e6bdb15cb22",
+          "text": "add 美股恐懼貪婪指標",
+          "done": true,
+          "createdAt": 1768134107590,
+          "finishedAt": "2026-01-13T01:20:38.886Z",
+          "pinned": false
+        },
+        {
+          "id": "6692e8ab-9413-4fb5-ad25-318a63a9ac17",
+          "text": "add 台股漲跌家數",
+          "done": true,
+          "createdAt": 1768134092031,
+          "finishedAt": "2026-01-13T01:20:39.996Z",
+          "pinned": false
+        },
+        {
+          "id": "508359ad-9ade-4d39-9beb-5bb34efe74cf",
+          "text": "import to Antigravity, create develop environment",
+          "done": true,
+          "createdAt": 1768133852887,
+          "finishedAt": "2026-01-13T01:20:56.017Z",
+          "pinned": false
+        },
+        {
+          "id": "ad57f07c-4cd4-4b42-8004-b72b22f87ffa",
+          "text": "monitor and manage favorite stock",
+          "done": true,
+          "createdAt": 1768134071114,
+          "finishedAt": "2026-01-13T01:21:00.663Z",
+          "pinned": false
+        }
+      ]
+    },
+    {
+      "id": "f54457fc-f9fc-4aa6-a580-7229d0938b3c",
+      "name": "AI Monitor",
+      "description": "monitor ai usage in time",
+      "startDate": null,
+      "dueDate": null,
+      "category": null,
+      "pinned": false,
+      "ideas": [
+        {
+          "id": "036cf8e0-d6f6-4cea-831b-633165ba3555",
+          "text": "monitor antigravity-claude-proxy server usage",
+          "done": false,
+          "createdAt": 1768144618715,
+          "finishedAt": null,
+          "pinned": false
+        },
+        {
+          "id": "761d8216-04b6-4067-93fc-5385bcc4501f",
+          "text": "monitor Codex CLI usage (if possible)",
+          "done": false,
+          "createdAt": 1768144665047,
+          "finishedAt": null,
+          "pinned": false
+        },
+        {
+          "id": "caadca7e-1bb8-4789-b996-e2e20d09e74f",
+          "text": "monitor local pc usage (maybe through CLI broker and SignalR)",
+          "done": false,
+          "createdAt": 1768144724412,
+          "finishedAt": null,
+          "pinned": false
+        }
+      ]
+    }
+  ],
+  "theme": "dark",
+  "uiState": {
+    "activeProjectId": "84e4de38-9e12-4aff-87b7-746f61fc9e24",
+    "isLogVisible": true,
+    "projectFilterQuery": "",
+    "projectCategoryFilter": [
+      "CI",
+      "MP",
+      "SP",
+      "none"
+    ],
+    "ideaFilter": "todo",
+    "copyWithUltrathink": true,
+    "serviceMonitorEnabled": true,
+    "serviceMonitorUrl": "http://localhost:8080",
+    "serviceMonitorIntervalMs": 5000,
+    "updateCheckIntervalMs": 60000,
+    "modelUsageUrl": "http://localhost:8080/health",
+    "dataSource": "localStorage",
+    "seedState": {
+      "localStorage": false,
+      "localDevice": false
+    },
+    "techActiveTopicId": "architecture"
+  }
+}

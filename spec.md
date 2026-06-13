@@ -15,7 +15,7 @@ Ophan 是 Project Idea Studio 的核心功能重構版，保留目前靜態網�
 - 使用者可以匯出、匯入資料。
 - 使用者可以從目前 Project Idea Studio 的資料格式匯入並轉移到 Ophan。
 - 使用者可以切換 light、dark theme。
-- 使用者看到的 UI 應保留目前網站的設計語言與配色，而不是重新設計成另一套品牌視覺。
+- 使用者看到的 UI 採用現代化 app-shell 版面，保留既有色票與字體，移除大陰影，改用漸層與 surface 層次作為視覺語言。
 
 ## 保留功能
 
@@ -45,7 +45,11 @@ Ophan 是 Project Idea Studio 的核心功能重構版，保留目前靜態網�
 
 ## UI 與圖示規範
 
-- 新版 UI 必須沿用目前 `styles.css` 的主要視覺系統。
+- 版面採用 100dvh app-shell：上方工具列 + 三欄工作區（左：專案列、中：idea 列、右：完成紀錄）；外層不得出現捲動軸，各欄獨立捲動。
+- 右欄預設收合；左右欄可從工具列切換，狀態持久化於 `ophan.ui` localStorage key。
+- 視覺層次：三層 surface（`--bg` < `--surface-1` 面板 < `--surface-2` 卡片）+ 1px border；移除大陰影（dialog/toast 允許 `--shadow-pop`）。
+- 漸層 token：`--grad-accent`（progress bar、active 分段按鈕）、`--grad-border`（active/drag-over 卡片描邊）。
+- 數值資料使用 JetBrains Mono，展示標題使用 Fraunces，UI 文字使用 Epilogue。
 - light theme 色票：
   - `--bg: #f6f6f1`
   - `--bg-soft: #f9efe4`
@@ -64,8 +68,6 @@ Ophan 是 Project Idea Studio 的核心功能重構版，保留目前靜態網�
   - `--muted: #b1bcc7`
   - `--accent: #33c1a0`
   - `--accent-2: #f0c56d`
-- 字體沿用 `Epilogue`、`Fraunces`、`JetBrains Mono`。
-- 版面保留 topbar、三欄工作區、panel、tab、progress、log panel 的語言。
 - 所有圖示必須使用 lucide icon component。
 - UI 不使用 emoji。
 - Ophan logo 使用 lucide icon 組合或 lucide 單一圖示，不使用自製 SVG。
@@ -121,10 +123,14 @@ type WorkspaceData = {
 - 可建立、編輯、刪除 idea。
 - 可切換 done/todo 並更新進度與 log。
 - 可 pin/unpin project 與 idea。
-- 可排序 project 與 idea。
+- 可拖曳排序 project 與 idea（pinned 項目仍浮頂）。
 - 可匯出 Ophan JSON。
 - 可匯入 Ophan JSON。
 - 可匯入 legacy JSON。
 - 若瀏覽器有 legacy LocalStorage 資料，UI 會提供匯入轉移入口。
+- 版面無外層捲動（`body { overflow: hidden }`）。
+- 左右欄切換後狀態 reload 仍保留。
+- 完成紀錄右欄顯示 ECharts 14 天趨勢圖，僅在首次展開時載入（獨立 chunk）。
+- 載入期間顯示 shimmer skeleton；`prefers-reduced-motion` 下所有動畫停用。
 - UI 無 emoji。
 - Ophan UI 圖示皆由 lucide component 提供。

@@ -1,10 +1,10 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- Legacy root static app: `index.html`, `styles.css`, `app.js`, `version.json`.
+- Legacy root static app: `lagcy/index.html`, `lagcy/styles.css`, `lagcy/app.js`, `lagcy/version.json`.
 - New Ophan app: `apps/web/` is a Svelte + TypeScript + Vite app.
 - Shared packages: `packages/core/` owns pure domain/data behavior; `packages/storage/` owns persistence adapters.
-- Runtime asset: `assets/intro.mp4` is used by the legacy splash video in `index.html`.
+- Runtime asset: `lagcy/assets/intro.mp4` is used by the legacy splash video in `lagcy/index.html`.
 - Video subproject: `project-idea-studio-video/` is a separate Remotion + React + TypeScript project for generating the legacy intro video.
 - Legacy root app has no bundler or framework. UI is rendered directly from `app.js`.
 - `app.js` layers: constants/helpers/icons, embedded tech-documentation snippets, domain (`Idea`, `Project`), data (`LocalStorageProjectRepository`, `FileSystemDataRepository`), use cases (`ProjectService`), UI (`ProjectIdeaUI`), visual utilities (`ThemeService`, `PolyBackground`).
@@ -12,17 +12,17 @@
 - UI includes settings, export/import, local-file storage, log analytics, charts, heatmaps, Gantt timeline, service monitor, model usage, update-check dialogs, theme switching, splash video, and background animation.
 
 ## Build, Test, and Development Commands
-- Legacy root app has no build step. Open `index.html` directly in a browser.
+- Legacy root app has no build step. Open `lagcy/index.html` directly in a browser.
 - Optional legacy local server for stable browser APIs:
-  - `python -m http.server` then open `http://localhost:8000/`.
+  - `cd lagcy && python -m http.server` then open `http://localhost:8000/`.
 - Ophan workspace commands:
   - `npm install`
   - `npm run dev` to run `apps/web`.
   - `npm run build` to type-check shared packages and build the web app.
   - `npm run check` to run package and Svelte checks.
 - Root smoke checks:
-  - `node --check app.js`
-  - Validate `version.json` as JSON after version edits.
+  - `node --check lagcy/app.js`
+  - Validate `lagcy/version.json` as JSON after version edits.
 - Video project commands:
   - `cd project-idea-studio-video`
   - `npm start` to open Remotion Studio.
@@ -30,7 +30,7 @@
 
 ## External Assets & Dependencies
 - Fonts are loaded from Google Fonts in `styles.css`.
-- Root app loads external browser scripts in `index.html`: lucide UMD, `lz-string`, D3, and Cal-Heatmap.
+- Root app loads external browser scripts in `lagcy/index.html`: lucide UMD, `lz-string`, D3, and Cal-Heatmap.
 - Chart.js, html2canvas, and Prism are lazy-loaded from CDN by `app.js`.
 - Root app uses inline SVG icons plus the local splash video asset. There are no local image assets.
 - Avoid new network calls unless explicitly required. Existing optional endpoints default to `http://localhost:8080/health` and `http://localhost:8080/account-limits`.
@@ -55,8 +55,8 @@
 - Ophan storage adapters should implement the `ProjectRepository` interface from `packages/core`.
 
 ## Versioning & Cache Busting
-- For legacy root app/runtime changes, update the timestamp version in `index.html`, `app.js`, and `version.json`.
-- Keep the `?v=` query values in `index.html` synchronized with `APP_VERSION` in `app.js` and `version` in `version.json`.
+- For legacy root app/runtime changes, update the timestamp version in `lagcy/index.html`, `lagcy/app.js`, and `lagcy/version.json`.
+- Keep the `?v=` query values in `lagcy/index.html` synchronized with `APP_VERSION` in `lagcy/app.js` and `version` in `lagcy/version.json`.
 - Use a sortable timestamp format such as `yyyyMMddHHmmss`.
 
 ## Manual Testing Guidelines

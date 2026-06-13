@@ -2,7 +2,7 @@
 
 ## 開發策略
 
-採用並行重構。保留目前根目錄靜態網站作為 legacy reference，新版 Ophan 實作於 `apps/web`，核心邏輯放在 `packages/core`，資料存取放在 `packages/storage`。
+採用並行重構。保留 legacy 靜態網站於 `lagcy/` 作為 reference，新版 Ophan 實作於 `apps/web`，核心邏輯放在 `packages/core`，資料存取放在 `packages/storage`。
 
 每個階段需完成後執行可用的編譯或測試驗證，修正錯誤後再 commit。commit message 使用 Conventional Commit 格式並以繁體中文撰寫。
 
@@ -50,6 +50,19 @@
 
 - 檢查是否有不必要的抽象、重複邏輯、未使用狀態或不符合 KISS 的實作。
 - 檢查 UI 是否仍有 emoji、自製圖示或偏離舊版色票。
-- 檢查 legacy root app 未被破壞。
-- 驗證：`npm run check`、`npm run build`、`node --check app.js`。
+- 檢查 legacy app 未被破壞。
+- 驗證：`npm run check`、`npm run build`、`node --check lagcy/app.js`。
 - Commit：`refactor: 簡化 Ophan 實作並完成收斂`
+
+## 階段六：UI 全面現代化重新設計（完成）
+
+6 個子階段，每個獨立 commit：
+
+1. **refactor: state 抽離 + 元件拆分** — `App.svelte`（622 行）拆為 12 個元件，建立 `.svelte.ts` state modules（`app`/`ui`/`dialogs`），全面改為 Svelte 5 runes mode。
+2. **feat: 100dvh app-shell 版面** — `grid-template-rows: auto 1fr; height: 100dvh`，三欄 CSS custom property 展合動畫（`--rail-w`/`--log-w` transition），`inert` 鍵盤隔離，`ophan.ui` 持久化，右欄預設收合。
+3. **feat: 新視覺系統 + 操作效率** — 移除大陰影、漸層 token（`--grad-accent`/`--grad-border`）、hover-revealed icon actions、category chips（all/CI/MP/SP/NA）、native `<dialog>` 表單、completion log reopen。
+4. **feat: 動畫** — GSAP 一次性進場 stagger、Svelte `animate:flip` 排序動畫、`transition:slide/fade` 增刪動畫、shimmer skeleton、`prefers-reduced-motion` 全域總閘。
+5. **feat: 拖曳排序** — core additive：`moveProjectTo`/`moveIdeaTo`（`reorderTo` helper）+ smoke test；UI：HTML5 DnD，只在 drop 時 reorder 避免與 FLIP 衝突。
+6. **feat: ECharts 趨勢圖** — `echarts-lite.ts` 隔離 value import；`TrendChart.svelte` 動態 `import()` → Vite code-split（~509KB 獨立 chunk）；14 天 bucket 聚合；`$effect` 讀 CSS 變數實現主題同步。
+
+驗證：`npm run check && npm run build` 通過，`node --check lagcy/app.js` 通過，Playwright 煙霧測試驗證所有功能。
