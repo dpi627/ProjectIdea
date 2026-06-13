@@ -4,6 +4,7 @@
   import { slide } from "svelte/transition";
   import { getCompletionLog } from "@ophan/core";
   import { motionMs } from "../animations/entrance";
+  import { formatLocale, i18n, t } from "../state/i18n.svelte";
   import { app, getWorkspace, reopenIdea } from "../state/app.svelte";
   import { ui } from "../state/ui.svelte";
   import { formatDate } from "../utils/format";
@@ -11,15 +12,17 @@
   import TrendChart from "./TrendChart.svelte";
 
   const completionLog = $derived(getCompletionLog(getWorkspace()));
+  const formatLogDate = (value: string | null) =>
+    formatDate(value, formatLocale(i18n.locale), t("format.noDate"));
 </script>
 
-<aside class="insight-panel" aria-label="Completed ideas" inert={ui.logCollapsed}>
+<aside class="insight-panel" aria-label={t("completed.label")} inert={ui.logCollapsed}>
   <div class="log-inner">
     <section class="panel fill" data-anim="panel">
       <header class="panel-head">
         <span class="panel-head-title">
           <History size={16} />
-          Completed
+          {t("completed.label")}
           <span class="panel-count">{completionLog.length}</span>
         </span>
       </header>
@@ -31,8 +34,8 @@
           <Skeleton count={3} />
         {:else if completionLog.length === 0}
           <div class="empty-state compact">
-            <p>No completed ideas yet.</p>
-            <span>Done items will appear here.</span>
+            <p>{t("completed.empty")}</p>
+            <span>{t("completed.emptyHint")}</span>
           </div>
         {:else}
           <ol class="scroll-list">
@@ -43,15 +46,15 @@
                 transition:slide={{ duration: motionMs(160) }}
               >
                 <p class="log-text">{entry.idea.text}</p>
-                <span class="log-meta">{entry.projectName} · {formatDate(entry.idea.finishedAt)}</span>
+                <span class="log-meta">{entry.projectName} · {formatLogDate(entry.idea.finishedAt)}</span>
                 <button
                   class="action-btn log-reopen"
                   type="button"
-                  title="Reopen idea"
+                  title={t("completed.reopen")}
                   onclick={() => reopenIdea(entry.idea.id)}
                 >
                   <RotateCcw size={13} />
-                  <span class="sr-only">Reopen idea</span>
+                  <span class="sr-only">{t("completed.reopen")}</span>
                 </button>
               </li>
             {/each}

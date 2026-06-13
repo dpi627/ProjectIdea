@@ -25,6 +25,7 @@ import {
   LocalStorageLegacyImporter,
 } from "@ophan/storage";
 import { downloadText } from "../utils/format";
+import { t } from "./i18n.svelte";
 
 const DEVICE_ID_KEY = "ophan.device-id";
 
@@ -104,7 +105,7 @@ export const addProject = async (draft: ProjectDraft) => {
     dueDate: draft.dueDate || null,
   });
   app.activeProjectId = result.project.id;
-  await persist(result.workspace, "Project created.");
+  await persist(result.workspace, t("toast.projectCreated"));
 };
 
 export const saveProject = async (projectId: string, draft: ProjectDraft) => {
@@ -116,7 +117,7 @@ export const saveProject = async (projectId: string, draft: ProjectDraft) => {
       startDate: draft.startDate || null,
       dueDate: draft.dueDate || null,
     }),
-    "Project updated."
+    t("toast.projectUpdated")
   );
 };
 
@@ -125,21 +126,21 @@ export const removeProject = async (projectId: string) => {
   if (app.activeProjectId === projectId) {
     app.activeProjectId = getVisibleProjects(next)[0]?.id || null;
   }
-  await persist(next, "Project removed.");
+  await persist(next, t("toast.projectRemoved"));
 };
 
 export const addIdea = async (projectId: string, text: string) => {
   if (!text.trim()) return;
   const result = createIdea(workspaceState, projectId, text);
-  await persist(result.workspace, "Idea added.");
+  await persist(result.workspace, t("toast.ideaAdded"));
 };
 
 export const saveIdeaText = async (ideaId: string, text: string) => {
-  await persist(updateIdea(workspaceState, ideaId, { text }), "Idea updated.");
+  await persist(updateIdea(workspaceState, ideaId, { text }), t("toast.ideaUpdated"));
 };
 
 export const removeIdea = async (ideaId: string) => {
-  await persist(deleteIdea(workspaceState, ideaId), "Idea removed.");
+  await persist(deleteIdea(workspaceState, ideaId), t("toast.ideaRemoved"));
 };
 
 export const toggleDone = async (ideaId: string) => {
@@ -147,7 +148,7 @@ export const toggleDone = async (ideaId: string) => {
 };
 
 export const reopenIdea = async (ideaId: string) => {
-  await persist(toggleIdeaDone(workspaceState, ideaId), "Idea reopened.");
+  await persist(toggleIdeaDone(workspaceState, ideaId), t("toast.ideaReopened"));
 };
 
 export const togglePinProject = async (projectId: string) => {
@@ -190,29 +191,29 @@ export const dropIdeaOn = async (
 export const exportData = () => {
   const stamp = new Date().toISOString().slice(0, 10);
   downloadText(`ophan-${stamp}.json`, exportWorkspaceJson(workspaceState));
-  showToast("Export ready.");
+  showToast(t("toast.exportReady"));
 };
 
 export const importFromJson = async (text: string) => {
   const next = importWorkspaceJson(text, deviceId);
   app.activeProjectId = getVisibleProjects(next)[0]?.id || null;
-  await persist(next, "Workspace imported.");
+  await persist(next, t("toast.workspaceImported"));
 };
 
 export const importLegacy = async () => {
   try {
     const next = legacyImporter.loadLegacyWorkspace();
     app.activeProjectId = getVisibleProjects(next)[0]?.id || null;
-    await persist(next, "Legacy data imported.");
+    await persist(next, t("toast.legacyImported"));
     app.legacyAvailable = false;
   } catch (error) {
     console.warn("Failed to import legacy workspace", error);
-    showToast("Legacy import failed.");
+    showToast(t("toast.legacyFailed"));
   }
 };
 
 export const clearWorkspace = async () => {
   const next = await repository.clear();
   app.activeProjectId = null;
-  await persist(next, "Local workspace cleared.");
+  await persist(next, t("toast.localCleared"));
 };

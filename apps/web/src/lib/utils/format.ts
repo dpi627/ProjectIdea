@@ -1,8 +1,12 @@
-export const formatDate = (value: string | null) => {
-  if (!value) return "No date";
+export const formatDate = (
+  value: string | null,
+  locale = "en",
+  emptyLabel = "No date"
+) => {
+  if (!value) return emptyLabel;
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "No date";
-  return new Intl.DateTimeFormat(undefined, {
+  if (Number.isNaN(date.getTime())) return emptyLabel;
+  return new Intl.DateTimeFormat(locale, {
     month: "short",
     day: "2-digit",
     hour: "2-digit",

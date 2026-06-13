@@ -2,7 +2,7 @@ const THEME_KEY = "ophan.theme";
 const UI_KEY = "ophan.ui";
 
 export type Theme = "light" | "dark";
-export type CategoryFilter = "all" | "CI" | "MP" | "SP" | "NA";
+export type ProjectCategoryFilter = "CI" | "MP" | "SP" | "NA";
 
 const getBrowserStorage = () =>
   typeof localStorage === "undefined" ? null : localStorage;
@@ -12,15 +12,24 @@ export const ui = $state({
   railCollapsed: false,
   logCollapsed: true,
   logOpenedOnce: false,
-  categoryFilter: "all" as CategoryFilter,
+  categoryFilters: [] as ProjectCategoryFilter[],
 });
 
-const isCategoryFilter = (value: unknown): value is CategoryFilter =>
-  value === "all" ||
-  value === "CI" ||
-  value === "MP" ||
-  value === "SP" ||
-  value === "NA";
+const isProjectCategoryFilter = (
+  value: unknown
+): value is ProjectCategoryFilter =>
+  value === "CI" || value === "MP" || value === "SP" || value === "NA";
+
+const normalizeCategoryFilters = (
+  value: unknown,
+  legacyValue?: unknown
+): ProjectCategoryFilter[] => {
+  if (Array.isArray(value)) {
+    return value.filter(isProjectCategoryFilter);
+  }
+  if (isProjectCategoryFilter(legacyValue)) return [legacyValue];
+  return [];
+};
 
 const applyThemeToDocument = () => {
   document.documentElement.dataset.theme = ui.theme;
@@ -32,7 +41,7 @@ const saveUi = () => {
     JSON.stringify({
       railCollapsed: ui.railCollapsed,
       logCollapsed: ui.logCollapsed,
-      categoryFilter: ui.categoryFilter,
+      categoryFilters: ui.categoryFilters,
     })
   );
 };
@@ -46,9 +55,10 @@ export const loadUi = () => {
       const parsed = JSON.parse(raw) as Record<string, unknown>;
       ui.railCollapsed = parsed.railCollapsed === true;
       ui.logCollapsed = parsed.logCollapsed !== false;
-      if (isCategoryFilter(parsed.categoryFilter)) {
-        ui.categoryFilter = parsed.categoryFilter;
-      }
+      ui.categoryFilters = normalizeCategoryFilters(
+        parsed.categoryFilters,
+        parsed.categoryFilter
+      );
     }
   } catch (error) {
     console.warn("Failed to restore UI state", error);
@@ -78,7 +88,9 @@ export const toggleLog = () => {
   saveUi();
 };
 
-export const setCategoryFilter = (next: CategoryFilter) => {
-  ui.categoryFilter = next;
+export const toggleCategoryFilter = (next: ProjectCategoryFilter) => {
+  ui.categoryFilters = ui.categoryFilters.includes(next)
+    ? ui.categoryFilters.filter((filter) => filter !== next)
+    : [...ui.categoryFilters, next];
   saveUi();
 };

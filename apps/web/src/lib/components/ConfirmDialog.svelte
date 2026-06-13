@@ -1,5 +1,6 @@
 <script lang="ts">
   import { closeConfirm, dialogs } from "../state/dialogs.svelte";
+  import { t } from "../state/i18n.svelte";
 
   let el: HTMLDialogElement | undefined = $state();
 
@@ -33,7 +34,7 @@
       <p class="dialog-message">{dialogs.confirm.message}</p>
       <div class="dialog-actions">
         <span class="spacer"></span>
-        <button class="ghost" type="button" onclick={closeConfirm}>Cancel</button>
+        <button class="ghost" type="button" onclick={closeConfirm}>{t("common.cancel")}</button>
         <button class="danger" type="button" onclick={confirm}>
           {dialogs.confirm.confirmText}
         </button>

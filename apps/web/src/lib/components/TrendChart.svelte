@@ -6,6 +6,7 @@
     aggregateCompletionTrend,
     type TrendPoint,
   } from "../charts/completion-trend";
+  import { t } from "../state/i18n.svelte";
   import { ui } from "../state/ui.svelte";
 
   let { entries }: { entries: CompletionLogEntry[] } = $props();
@@ -34,7 +35,7 @@
         axisLabel: {
           color: muted,
           fontSize: 9,
-          fontFamily: "JetBrains Mono",
+          fontFamily: "Chiron GoRound TC",
         },
       },
       yAxis: {
@@ -44,7 +45,7 @@
         axisLabel: {
           color: muted,
           fontSize: 9,
-          fontFamily: "JetBrains Mono",
+          fontFamily: "Chiron GoRound TC",
         },
       },
       series: [
@@ -102,7 +103,7 @@
 </script>
 
 <div class="trend-card">
-  <span class="trend-label">Last 14 days</span>
+  <span class="trend-label">{t("chart.last14Days")}</span>
   {#if !ready}
     <div class="skeleton trend-skeleton" aria-hidden="true"></div>
   {/if}

@@ -11,6 +11,7 @@
   import { fade } from "svelte/transition";
   import { getProjectStats, getVisibleProjects } from "@ophan/core";
   import { motionMs } from "../animations/entrance";
+  import { t } from "../state/i18n.svelte";
   import {
     app,
     dropProjectOn,
@@ -20,9 +21,13 @@
   } from "../state/app.svelte";
   import Skeleton from "./Skeleton.svelte";
   import { openProjectCreate, openProjectEdit } from "../state/dialogs.svelte";
-  import { setCategoryFilter, ui, type CategoryFilter } from "../state/ui.svelte";
+  import {
+    toggleCategoryFilter,
+    ui,
+    type ProjectCategoryFilter,
+  } from "../state/ui.svelte";
 
-  const FILTERS: CategoryFilter[] = ["all", "CI", "MP", "SP", "NA"];
+  const FILTERS: ProjectCategoryFilter[] = ["CI", "MP", "SP", "NA"];
 
   const projects = $derived(getVisibleProjects(getWorkspace()));
 
@@ -35,37 +40,38 @@
   };
   const filteredProjects = $derived(
     projects.filter((project) => {
-      if (ui.categoryFilter === "all") return true;
-      if (ui.categoryFilter === "NA") return !project.category;
-      return project.category === ui.categoryFilter;
+      if (ui.categoryFilters.length === 0) return true;
+      if (!project.category) return ui.categoryFilters.includes("NA");
+      return ui.categoryFilters.includes(project.category);
     })
   );
 </script>
 
-<aside class="project-rail" aria-label="Projects" inert={ui.railCollapsed}>
+<aside class="project-rail" aria-label={t("projects.label")} inert={ui.railCollapsed}>
   <div class="rail-inner">
     <section class="panel fill" data-anim="panel">
       <header class="panel-head">
         <span class="panel-head-title">
           <FolderKanban size={16} />
-          Projects
+          {t("projects.label")}
           <span class="panel-count">{filteredProjects.length}</span>
         </span>
-        <button class="tool-button" type="button" title="New project" onclick={openProjectCreate}>
+        <button class="tool-button" type="button" title={t("projects.new")} onclick={openProjectCreate}>
           <Plus size={16} />
-          <span class="sr-only">New project</span>
+          <span class="sr-only">{t("projects.new")}</span>
         </button>
       </header>
       <div class="panel-body">
-        <div class="chip-row" role="group" aria-label="Filter by category">
+        <div class="chip-row project-filter-chips" role="group" aria-label={t("projects.filterLabel")}>
           {#each FILTERS as filter (filter)}
             <button
               class="chip"
-              class:active={ui.categoryFilter === filter}
+              class:active={ui.categoryFilters.includes(filter)}
               type="button"
-              onclick={() => setCategoryFilter(filter)}
+              aria-pressed={ui.categoryFilters.includes(filter)}
+              onclick={() => toggleCategoryFilter(filter)}
             >
-              {filter === "all" ? "All" : filter}
+              {filter}
             </button>
           {/each}
         </div>
@@ -75,11 +81,11 @@
             <Skeleton count={4} />
           {:else if filteredProjects.length === 0}
             <div class="empty-state compact">
-              <p>{projects.length === 0 ? "No projects yet." : "Nothing in this category."}</p>
+              <p>{projects.length === 0 ? t("projects.none") : t("projects.noneInCategory")}</p>
               <span>
                 {projects.length === 0
-                  ? "Create one to begin tracking ideas."
-                  : "Switch category filters to see more."}
+                  ? t("projects.createHint")
+                  : t("projects.filterHint")}
               </span>
             </div>
           {:else}
@@ -127,7 +133,7 @@
                 >
                   <div class="card-title-row">
                     {#if project.pinned}
-                      <span class="pin-indicator" title="Pinned"><Pin size={13} /></span>
+                      <span class="pin-indicator" title={t("projects.pinned")}><Pin size={13} /></span>
                     {/if}
                     <h3>{project.name}</h3>
                     {#if project.category}
@@ -144,45 +150,45 @@
                     <span class="mono">{stats.done}/{stats.total}</span>
                   </div>
                 </button>
-                <div class="card-actions" aria-label="Project actions">
+                <div class="card-actions" aria-label={t("projects.label")}>
                   <button
                     class="action-btn"
                     class:is-on={project.pinned}
                     type="button"
-                    title={project.pinned ? "Unpin" : "Pin"}
+                    title={project.pinned ? t("common.unpin") : t("common.pin")}
                     onclick={() => togglePinProject(project.id)}
                   >
                     <Pin size={13} />
-                    <span class="sr-only">{project.pinned ? "Unpin" : "Pin"}</span>
+                    <span class="sr-only">{project.pinned ? t("common.unpin") : t("common.pin")}</span>
                   </button>
                   <button
                     class="action-btn"
                     type="button"
-                    title="Edit project"
+                    title={t("idea.editProject")}
                     onclick={() => openProjectEdit(project.id)}
                   >
                     <Pencil size={13} />
-                    <span class="sr-only">Edit project</span>
+                    <span class="sr-only">{t("idea.editProject")}</span>
                   </button>
                   <button
                     class="action-btn"
                     type="button"
-                    title="Move up"
+                    title={t("common.moveUp")}
                     disabled={index === 0}
                     onclick={() => nudgeProject(project.id, -1)}
                   >
                     <ArrowUp size={13} />
-                    <span class="sr-only">Move up</span>
+                    <span class="sr-only">{t("common.moveUp")}</span>
                   </button>
                   <button
                     class="action-btn"
                     type="button"
-                    title="Move down"
+                    title={t("common.moveDown")}
                     disabled={index === filteredProjects.length - 1}
                     onclick={() => nudgeProject(project.id, 1)}
                   >
                     <ArrowDown size={13} />
-                    <span class="sr-only">Move down</span>
+                    <span class="sr-only">{t("common.moveDown")}</span>
                   </button>
                 </div>
               </article>

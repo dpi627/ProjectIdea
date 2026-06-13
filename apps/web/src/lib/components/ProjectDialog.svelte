@@ -13,6 +13,7 @@
     dialogs,
     openConfirm,
   } from "../state/dialogs.svelte";
+  import { t } from "../state/i18n.svelte";
 
   let el: HTMLDialogElement | undefined = $state();
   let draft = $state(emptyProjectDraft());
@@ -63,9 +64,9 @@
     const project = editingProject;
     if (!project) return;
     openConfirm({
-      title: "Delete project?",
-      message: `"${project.name}" and all of its ideas will be removed.`,
-      confirmText: "Delete project",
+      title: t("idea.deleteProjectTitle"),
+      message: t("idea.deleteProjectMessage", { projectName: project.name }),
+      confirmText: t("idea.deleteProject"),
       onConfirm: async () => {
         await removeProject(project.id);
         closeProjectDialog();
@@ -82,24 +83,24 @@
 >
   {#if dialogs.project}
     <div class="dialog-head">
-      <h2>{dialogs.project.mode === "edit" ? "Edit project" : "New project"}</h2>
-      <button class="action-btn" type="button" aria-label="Close" onclick={closeProjectDialog}>
+      <h2>{dialogs.project.mode === "edit" ? t("dialog.project.edit") : t("dialog.project.new")}</h2>
+      <button class="action-btn" type="button" aria-label={t("common.close")} onclick={closeProjectDialog}>
         <X size={15} />
       </button>
     </div>
     <form class="dialog-body" onsubmit={submit}>
       <label>
-        Name
-        <input bind:value={draft.name} required placeholder="Project name" />
+        {t("dialog.project.name")}
+        <input bind:value={draft.name} required placeholder={t("dialog.project.namePlaceholder")} />
       </label>
       <label>
-        Description
-        <textarea bind:value={draft.description} rows="3" placeholder="Short note"></textarea>
+        {t("dialog.project.description")}
+        <textarea bind:value={draft.description} rows="3" placeholder={t("dialog.project.descriptionPlaceholder")}></textarea>
       </label>
       <label>
-        Category
+        {t("dialog.project.category")}
         <select bind:value={draft.category}>
-          <option value="">None</option>
+          <option value="">{t("dialog.project.none")}</option>
           <option value="CI">CI</option>
           <option value="MP">MP</option>
           <option value="SP">SP</option>
@@ -107,11 +108,11 @@
       </label>
       <div class="dialog-grid">
         <label>
-          Start
+          {t("dialog.project.start")}
           <input bind:value={draft.startDate} type="date" />
         </label>
         <label>
-          Due
+          {t("dialog.project.due")}
           <input bind:value={draft.dueDate} type="date" />
         </label>
       </div>
@@ -119,13 +120,13 @@
         {#if dialogs.project.mode === "edit"}
           <button class="danger" type="button" onclick={confirmDelete}>
             <Trash2 size={15} />
-            <span>Delete</span>
+            <span>{t("common.delete")}</span>
           </button>
         {/if}
         <span class="spacer"></span>
-        <button class="ghost" type="button" onclick={closeProjectDialog}>Cancel</button>
+        <button class="ghost" type="button" onclick={closeProjectDialog}>{t("common.cancel")}</button>
         <button class="primary" type="submit">
-          {dialogs.project.mode === "edit" ? "Save changes" : "Create project"}
+          {dialogs.project.mode === "edit" ? t("dialog.project.save") : t("dialog.project.create")}
         </button>
       </div>
     </form>

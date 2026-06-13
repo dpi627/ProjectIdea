@@ -18,14 +18,15 @@
   --dot: rgba(13, 27, 42, 0.06);
   --shadow-pop: 0 8px 24px rgba(13, 27, 42, 0.12);
   --grad-accent: linear-gradient(90deg, var(--accent), var(--accent-2));
+  --scrollbar-w: 6px;
   --grad-border: linear-gradient(
     135deg,
     color-mix(in srgb, var(--accent) 60%, transparent),
     color-mix(in srgb, var(--accent-2) 60%, transparent)
   );
-  --font-ui: "Epilogue", "Segoe UI", sans-serif;
-  --font-display: "Fraunces", "Times New Roman", serif;
-  --font-mono: "JetBrains Mono", "Consolas", monospace;
+  --font-ui: "Chiron GoRound TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  --font-display: var(--font-ui);
+  --font-mono: var(--font-ui);
 }
 
 :root[data-theme="dark"] {
@@ -248,6 +249,14 @@ h3 {
   background: color-mix(in srgb, var(--accent) 9%, var(--surface));
 }
 
+.language-toggle {
+  width: auto;
+  min-width: 32px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .primary,
 .ghost,
 .danger {
@@ -444,14 +453,21 @@ h3 {
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
-  padding-right: 2px;
+  margin-right: -16px;
+  padding-right: calc(16px + var(--scrollbar-w));
 }
 
 ol.scroll-list,
 ul.scroll-list {
   list-style: none;
-  margin: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  margin-left: 0;
   padding-left: 0;
+}
+
+.insight-panel .scroll-list {
+  padding-right: var(--scrollbar-w);
 }
 
 /* ---------------------------------- chips --------------------------------- */
@@ -488,6 +504,16 @@ ul.scroll-list {
     var(--grad-border) border-box;
 }
 
+.project-rail .project-filter-chips {
+  gap: 4px;
+}
+
+.project-rail .project-filter-chips .chip {
+  padding: 3px 7px;
+  font-size: 9.5px;
+  letter-spacing: 0.05em;
+}
+
 .category-badge {
   font-family: var(--font-mono);
   font-size: 10.5px;
@@ -498,6 +524,11 @@ ul.scroll-list {
   border: 1px solid color-mix(in srgb, var(--accent-2) 55%, transparent);
   background: color-mix(in srgb, var(--accent-2) 12%, transparent);
   color: var(--ink);
+}
+
+.project-rail .category-badge {
+  padding: 2px 6px;
+  font-size: 9.5px;
 }
 
 /* ---------------------------------- cards --------------------------------- */
@@ -780,6 +811,51 @@ ul.scroll-list {
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
   padding: 14px 18px 18px;
+}
+
+.scroll-list,
+.idea-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.scroll-list:hover,
+.scroll-list:focus-within,
+.idea-scroll:hover,
+.idea-scroll:focus-within {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 46%, transparent) transparent;
+}
+
+.scroll-list::-webkit-scrollbar,
+.idea-scroll::-webkit-scrollbar {
+  width: var(--scrollbar-w);
+  height: 0;
+}
+
+.scroll-list:hover::-webkit-scrollbar,
+.scroll-list:focus-within::-webkit-scrollbar,
+.idea-scroll:hover::-webkit-scrollbar,
+.idea-scroll:focus-within::-webkit-scrollbar {
+  width: var(--scrollbar-w);
+}
+
+.scroll-list::-webkit-scrollbar-track,
+.idea-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-list::-webkit-scrollbar-thumb,
+.idea-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: transparent;
+}
+
+.scroll-list:hover::-webkit-scrollbar-thumb,
+.scroll-list:focus-within::-webkit-scrollbar-thumb,
+.idea-scroll:hover::-webkit-scrollbar-thumb,
+.idea-scroll:focus-within::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 42%, transparent);
 }
 
 .idea-card {
@@ -1098,6 +1174,21 @@ dialog::backdrop {
   .log-reopen {
     opacity: 1;
   }
+
+  .scroll-list,
+  .idea-scroll {
+    scrollbar-width: thin;
+  }
+
+  .scroll-list::-webkit-scrollbar,
+  .idea-scroll::-webkit-scrollbar {
+    width: var(--scrollbar-w);
+  }
+
+  .scroll-list::-webkit-scrollbar-thumb,
+  .idea-scroll::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--muted) 42%, transparent);
+  }
 }
 
 @media (max-width: 900px) {
@@ -1130,6 +1221,8 @@ dialog::backdrop {
 
   .scroll-list,
   .idea-scroll {
+    margin-right: 0;
+    padding-right: 0;
     overflow: visible;
   }
 

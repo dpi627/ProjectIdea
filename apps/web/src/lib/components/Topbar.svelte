@@ -10,6 +10,7 @@
     Sun,
     Upload,
   } from "@lucide/svelte";
+  import { localeLabel, t, toggleLocale } from "../state/i18n.svelte";
   import {
     app,
     clearWorkspace,
@@ -32,7 +33,7 @@
       await importFromJson(text);
     } catch (error) {
       console.warn("Failed to import workspace", error);
-      showToast("Import failed. Check the JSON file.");
+      showToast(t("toast.importFailed"));
     } finally {
       input.value = "";
     }
@@ -40,10 +41,9 @@
 
   const confirmClear = () => {
     openConfirm({
-      title: "Clear local data?",
-      message:
-        "All projects and ideas stored in this browser will be removed. Export a backup first if you need one.",
-      confirmText: "Clear data",
+      title: t("topbar.clearTitle"),
+      message: t("topbar.clearMessage"),
+      confirmText: t("topbar.clearConfirm"),
       onConfirm: clearWorkspace,
     });
   };
@@ -56,7 +56,7 @@
     </div>
     <div>
       <p class="brand-title">Ophan</p>
-      <p class="brand-subtitle">open and use, no auth, stored in the local</p>
+      <p class="brand-subtitle">{t("brand.subtitle")}</p>
     </div>
   </div>
   <div class="topbar-actions" data-anim="bar">
@@ -64,52 +64,52 @@
       class="tool-button"
       type="button"
       aria-pressed={!ui.railCollapsed}
-      title={ui.railCollapsed ? "Show projects panel" : "Hide projects panel"}
+      title={ui.railCollapsed ? t("topbar.showProjects") : t("topbar.hideProjects")}
       onclick={toggleRail}
     >
       <PanelLeft size={16} />
-      <span class="sr-only">Projects panel</span>
+      <span class="sr-only">{t("topbar.projectsPanel")}</span>
     </button>
     <button
       class="tool-button"
       type="button"
       aria-pressed={!ui.logCollapsed}
-      title={ui.logCollapsed ? "Show completed panel" : "Hide completed panel"}
+      title={ui.logCollapsed ? t("topbar.showCompleted") : t("topbar.hideCompleted")}
       onclick={toggleLog}
     >
       <PanelRight size={16} />
-      <span class="sr-only">Completed panel</span>
+      <span class="sr-only">{t("topbar.completedPanel")}</span>
     </button>
 
     <span class="topbar-divider" aria-hidden="true"></span>
 
-    <button class="tool-button" type="button" title="Export JSON" onclick={exportData}>
+    <button class="tool-button" type="button" title={t("topbar.exportJson")} onclick={exportData}>
       <Download size={16} />
-      <span class="sr-only">Export JSON</span>
+      <span class="sr-only">{t("topbar.exportJson")}</span>
     </button>
     <button
       class="tool-button"
       type="button"
-      title="Import JSON"
+      title={t("topbar.importJson")}
       onclick={() => importFileInput?.click()}
     >
       <Upload size={16} />
-      <span class="sr-only">Import JSON</span>
+      <span class="sr-only">{t("topbar.importJson")}</span>
     </button>
     {#if app.legacyAvailable}
       <button
         class="tool-button"
         type="button"
-        title="Import legacy static data"
+        title={t("topbar.importLegacy")}
         onclick={importLegacy}
       >
         <DatabaseBackup size={16} />
-        <span class="sr-only">Import legacy static data</span>
+        <span class="sr-only">{t("topbar.importLegacy")}</span>
       </button>
     {/if}
-    <button class="tool-button" type="button" title="Clear local data" onclick={confirmClear}>
+    <button class="tool-button" type="button" title={t("topbar.clearData")} onclick={confirmClear}>
       <RotateCcw size={16} />
-      <span class="sr-only">Clear local data</span>
+      <span class="sr-only">{t("topbar.clearData")}</span>
     </button>
 
     <span class="topbar-divider" aria-hidden="true"></span>
@@ -117,7 +117,7 @@
     <button
       class="tool-button"
       type="button"
-      title={ui.theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+      title={ui.theme === "dark" ? t("topbar.switchLight") : t("topbar.switchDark")}
       onclick={toggleTheme}
     >
       {#if ui.theme === "dark"}
@@ -125,7 +125,16 @@
       {:else}
         <Moon size={16} />
       {/if}
-      <span class="sr-only">Toggle theme</span>
+      <span class="sr-only">{t("topbar.toggleTheme")}</span>
+    </button>
+    <button
+      class="tool-button language-toggle"
+      type="button"
+      title={t("topbar.switchLanguage")}
+      aria-label={t("topbar.language")}
+      onclick={toggleLocale}
+    >
+      {localeLabel()}
     </button>
     <input
       bind:this={importFileInput}

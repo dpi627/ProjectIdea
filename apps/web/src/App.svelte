@@ -8,6 +8,7 @@
   import ProjectRail from "./lib/components/ProjectRail.svelte";
   import Toast from "./lib/components/Toast.svelte";
   import Topbar from "./lib/components/Topbar.svelte";
+  import { initLocale, t } from "./lib/state/i18n.svelte";
   import { app, init } from "./lib/state/app.svelte";
   import { loadUi, ui } from "./lib/state/ui.svelte";
 
@@ -15,6 +16,7 @@
   let entrancePlayed = false;
 
   onMount(async () => {
+    initLocale();
     loadUi();
     await init();
   });
@@ -28,7 +30,7 @@
 </script>
 
 <svelte:head>
-  <title>Ophan</title>
+  <title>{t("app.title")}</title>
 </svelte:head>
 
 <div class="app-shell" bind:this={shellEl}>
