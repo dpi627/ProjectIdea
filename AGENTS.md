@@ -2,6 +2,7 @@
 
 ## Project Structure & Module Organization
 - Legacy root static app: `lagcy/index.html`, `lagcy/styles.css`, `lagcy/app.js`, `lagcy/version.json`.
+- `lagcy/` is reference-only for future product work. Do not modify legacy files; all UI/product adjustments target the new Ophan app.
 - New Ophan app: `apps/web/` is a Svelte + TypeScript + Vite app.
 - Shared packages: `packages/core/` owns pure domain/data behavior; `packages/storage/` owns persistence adapters.
 - Runtime asset: `lagcy/assets/intro.mp4` is used by the legacy splash video in `lagcy/index.html`.
