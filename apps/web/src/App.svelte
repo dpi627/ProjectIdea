@@ -6,6 +6,7 @@
   import IdeaPanel from "./lib/components/IdeaPanel.svelte";
   import ProjectDialog from "./lib/components/ProjectDialog.svelte";
   import ProjectRail from "./lib/components/ProjectRail.svelte";
+  import TechDocsDialog from "./lib/components/TechDocsDialog.svelte";
   import Toast from "./lib/components/Toast.svelte";
   import Topbar from "./lib/components/Topbar.svelte";
   import { initLocale, t } from "./lib/state/i18n.svelte";
@@ -47,6 +48,7 @@
   </main>
 
   <ProjectDialog />
+  <TechDocsDialog />
   <ConfirmDialog />
   <Toast />
 </div>

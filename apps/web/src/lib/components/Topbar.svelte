@@ -3,6 +3,7 @@
     CircleDot,
     DatabaseBackup,
     Download,
+    FileText,
     Moon,
     PanelLeft,
     PanelRight,
@@ -19,7 +20,7 @@
     importLegacy,
     showToast,
   } from "../state/app.svelte";
-  import { openConfirm } from "../state/dialogs.svelte";
+  import { openConfirm, openTechDocs } from "../state/dialogs.svelte";
   import { toggleLog, toggleRail, toggleTheme, ui } from "../state/ui.svelte";
 
   let importFileInput: HTMLInputElement | undefined = $state();
@@ -110,6 +111,10 @@
     <button class="tool-button" type="button" title={t("topbar.clearData")} onclick={confirmClear}>
       <RotateCcw size={16} />
       <span class="sr-only">{t("topbar.clearData")}</span>
+    </button>
+    <button class="tool-button" type="button" title={t("topbar.techDocs")} onclick={() => openTechDocs()}>
+      <FileText size={16} />
+      <span class="sr-only">{t("topbar.techDocs")}</span>
     </button>
 
     <span class="topbar-divider" aria-hidden="true"></span>
