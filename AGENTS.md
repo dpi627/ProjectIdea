@@ -43,6 +43,7 @@
 - Keep UI logic inside `ProjectIdeaUI` until a deliberate refactor extracts focused collaborators.
 - When adding user-provided text to HTML strings, use `escapeHtml()` before assigning to `innerHTML`.
 - Prefer small, readable helpers over large inline blocks.
+- UI 設計請遵循 Design System 頁面
 - Preserve existing static-app simplicity unless the task explicitly introduces a build step.
 
 ## Data & Storage
